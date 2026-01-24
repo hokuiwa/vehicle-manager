@@ -998,6 +998,8 @@
             showAddInspectionCert: false,
             showAddMaintenancePDF: false,
             showAddInsurance: false,
+            editingRepair: null, // 編集中の修繕記録
+            editingFuel: null, // 編集中の燃料記録
             isLoading: true,
             currentUser: 'システム管理者',
             searchQuery: '',
@@ -1620,6 +1622,8 @@
             storage.set(`accident:${newAccident.id}`, JSON.stringify(newAccident));
             await loadData();
             state.showAddAccident = false;
+            uploadedAccidentPDF = null;
+            uploadedAccidentVideo = null;
             render();
         }
 
@@ -2400,12 +2404,19 @@
                                         <h4>${repair.type}</h4>
                                         <p class="record-date">${repair.date}</p>
                                     </div>
-                                    <button class="delete-btn" onclick="deleteRepair('${repair.id}')">
-                                        <svg width="20" height="20" viewBox="0 0 24 24">
-                                            <path d="M3 6h18" />
-                                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                        </svg>
-                                    </button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-secondary btn-small" onclick="editRepair('${repair.id}')" style="padding: 6px 10px;">
+                                            <svg width="16" height="16" viewBox="0 0 24 24">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </button>
+                                        <button class="delete-btn" onclick="deleteRepair('${repair.id}')">
+                                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                                <path d="M3 6h18" />
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="record-grid">
                                     <div class="record-item">
@@ -2451,12 +2462,19 @@
                                         <h4>給油記録</h4>
                                         <p class="record-date">${f.date}</p>
                                     </div>
-                                    <button class="delete-btn" onclick="deleteFuel('${f.id}')">
-                                        <svg width="20" height="20" viewBox="0 0 24 24">
-                                            <path d="M3 6h18" />
-                                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                        </svg>
-                                    </button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-secondary btn-small" onclick="editFuel('${f.id}')" style="padding: 6px 10px;">
+                                            <svg width="16" height="16" viewBox="0 0 24 24">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </button>
+                                        <button class="delete-btn" onclick="deleteFuel('${f.id}')">
+                                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                                <path d="M3 6h18" />
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="record-grid">
                                     <div class="record-item">
@@ -2749,11 +2767,14 @@
         }
 
         function renderRepairForm() {
+            const repair = state.editingRepair;
+            const isEditing = repair !== null;
+            
             return `
                 <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal" onclick="event.stopPropagation()">
                         <div class="modal-header">
-                            <h2>修繕記録を追加</h2>
+                            <h2>${isEditing ? '修繕記録を編集' : '修繕記録を追加'}</h2>
                             <button class="close-btn" onclick="closeRepairForm()">
                                 <svg width="24" height="24" viewBox="0 0 24 24">
                                     <path d="M18 6 6 18" />
@@ -2762,31 +2783,32 @@
                             </button>
                         </div>
                         <form class="modal-body" onsubmit="submitRepairForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${repair.id}">` : ''}
                             <div class="form-group">
                                 <label>実施日</label>
-                                <input type="date" class="form-control" name="date" value="${new Date().toISOString().split('T')[0]}" required>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? repair.date : new Date().toISOString().split('T')[0]}" required>
                             </div>
                             <div class="form-group">
                                 <label>作業内容</label>
-                                <input type="text" class="form-control" name="type" placeholder="例: オイル交換" required>
+                                <input type="text" class="form-control" name="type" placeholder="例: オイル交換" value="${isEditing ? repair.type : ''}" required>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>費用 (円)</label>
-                                    <input type="number" class="form-control" name="cost" value="0" required>
+                                    <input type="number" class="form-control" name="cost" value="${isEditing ? repair.cost : 0}" required>
                                 </div>
                                 <div class="form-group">
                                     <label>走行距離 (km)</label>
-                                    <input type="number" class="form-control" name="mileage" value="0" required>
+                                    <input type="number" class="form-control" name="mileage" value="${isEditing ? repair.mileage : 0}" required>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label>工場名</label>
-                                <input type="text" class="form-control" name="garage" placeholder="例: トヨタディーラー札幌" required>
+                                <input type="text" class="form-control" name="garage" placeholder="例: トヨタディーラー札幌" value="${isEditing ? repair.garage : ''}" required>
                             </div>
                             <div class="form-group">
                                 <label>備考</label>
-                                <textarea class="form-control" name="notes" placeholder="メモや特記事項"></textarea>
+                                <textarea class="form-control" name="notes" placeholder="メモや特記事項">${isEditing && repair.notes ? repair.notes : ''}</textarea>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn-secondary" onclick="closeRepairForm()">キャンセル</button>
@@ -2804,11 +2826,14 @@
         }
 
         function renderFuelForm() {
+            const fuel = state.editingFuel;
+            const isEditing = fuel !== null;
+            
             return `
                 <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal" onclick="event.stopPropagation()">
                         <div class="modal-header">
-                            <h2>燃料記録を追加</h2>
+                            <h2>${isEditing ? '燃料記録を編集' : '燃料記録を追加'}</h2>
                             <button class="close-btn" onclick="closeFuelForm()">
                                 <svg width="24" height="24" viewBox="0 0 24 24">
                                     <path d="M18 6 6 18" />
@@ -2817,28 +2842,29 @@
                             </button>
                         </div>
                         <form class="modal-body" onsubmit="submitFuelForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${fuel.id}">` : ''}
                             <div class="form-group">
                                 <label>給油日</label>
-                                <input type="date" class="form-control" name="date" value="${new Date().toISOString().split('T')[0]}" required>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? fuel.date : new Date().toISOString().split('T')[0]}" required>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>給油量 (L)</label>
-                                    <input type="number" step="0.1" class="form-control" name="liters" value="0" required>
+                                    <input type="number" step="0.1" class="form-control" name="liters" value="${isEditing ? fuel.liters : 0}" required>
                                 </div>
                                 <div class="form-group">
                                     <label>費用 (円)</label>
-                                    <input type="number" class="form-control" name="cost" value="0" required>
+                                    <input type="number" class="form-control" name="cost" value="${isEditing ? fuel.cost : 0}" required>
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>走行距離 (km)</label>
-                                    <input type="number" class="form-control" name="mileage" value="0" required>
+                                    <input type="number" class="form-control" name="mileage" value="${isEditing ? fuel.mileage : 0}" required>
                                 </div>
                                 <div class="form-group">
                                     <label>燃費 (km/L)</label>
-                                    <input type="number" step="0.1" class="form-control" name="fuelEfficiency" value="0" required>
+                                    <input type="number" step="0.1" class="form-control" name="fuelEfficiency" value="${isEditing ? fuel.fuelEfficiency : 0}" required>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -3080,22 +3106,44 @@
         }
 
         function openAddRepair() {
+            state.editingRepair = null;
             state.showAddRepair = true;
             render();
         }
 
+        function editRepair(repairId) {
+            const repair = state.repairs.find(r => r.id === repairId);
+            if (repair) {
+                state.editingRepair = repair;
+                state.showAddRepair = true;
+                render();
+            }
+        }
+
         function closeRepairForm() {
             state.showAddRepair = false;
+            state.editingRepair = null;
             render();
         }
 
         function openAddFuel() {
+            state.editingFuel = null;
             state.showAddFuel = true;
             render();
         }
 
+        function editFuel(fuelId) {
+            const fuel = state.fuelRecords.find(f => f.id === fuelId);
+            if (fuel) {
+                state.editingFuel = fuel;
+                state.showAddFuel = true;
+                render();
+            }
+        }
+
         function closeFuelForm() {
             state.showAddFuel = false;
+            state.editingFuel = null;
             render();
         }
 
@@ -3331,6 +3379,7 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             const repairData = {
+                id: formData.get('id') || `r${Date.now()}`,
                 date: formData.get('date'),
                 type: formData.get('type'),
                 cost: parseInt(formData.get('cost')),
@@ -3345,6 +3394,7 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             const fuelData = {
+                id: formData.get('id') || `f${Date.now()}`,
                 date: formData.get('date'),
                 liters: parseFloat(formData.get('liters')),
                 cost: parseInt(formData.get('cost')),
@@ -3356,17 +3406,22 @@
 
         function submitAccidentForm(event) {
             event.preventDefault();
-            const formData = new FormData(event.target);
-            const accidentData = {
-                date: formData.get('date'),
-                type: formData.get('type'),
-                location: formData.get('location'),
-                repairCost: parseInt(formData.get('repairCost')),
-                description: formData.get('description'),
-                pdfFile: uploadedAccidentPDF,
-                videoFile: uploadedAccidentVideo
-            };
-            saveAccident(accidentData);
+            try {
+                const formData = new FormData(event.target);
+                const accidentData = {
+                    date: formData.get('date'),
+                    type: formData.get('type'),
+                    location: formData.get('location'),
+                    repairCost: parseInt(formData.get('repairCost')) || 0,
+                    description: formData.get('description'),
+                    pdfFile: uploadedAccidentPDF,
+                    videoFile: uploadedAccidentVideo
+                };
+                saveAccident(accidentData);
+            } catch (error) {
+                console.error('事故記録の保存エラー:', error);
+                alert('保存中にエラーが発生しました。もう一度お試しください。');
+            }
         }
 
         function submitDocumentForm(event) {
