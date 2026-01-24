@@ -1000,6 +1000,7 @@
             showAddInsurance: false,
             editingRepair: null, // 編集中の修繕記録
             editingFuel: null, // 編集中の燃料記録
+            editingAccident: null, // 編集中の事故記録
             isLoading: true,
             currentUser: 'システム管理者',
             searchQuery: '',
@@ -1613,18 +1614,35 @@
         }
 
         async function saveAccident(accidentData) {
+            console.log('🚨 保存開始:', accidentData);
+            console.log('📍 選択中の車両:', state.selectedVehicle);
+            
+            if (!state.selectedVehicle) {
+                alert('車両が選択されていません');
+                return;
+            }
+            
             const newAccident = {
                 ...accidentData,
                 id: accidentData.id || `a${Date.now()}`,
                 vehicleId: state.selectedVehicle.id
             };
             
-            storage.set(`accident:${newAccident.id}`, JSON.stringify(newAccident));
-            await loadData();
-            state.showAddAccident = false;
-            uploadedAccidentPDF = null;
-            uploadedAccidentVideo = null;
-            render();
+            console.log('💾 保存するデータ:', newAccident);
+            
+            try {
+                storage.set(`accident:${newAccident.id}`, JSON.stringify(newAccident));
+                console.log('✅ 保存成功！');
+                
+                await loadData();
+                state.showAddAccident = false;
+                uploadedAccidentPDF = null;
+                uploadedAccidentVideo = null;
+                render();
+            } catch (error) {
+                console.error('❌ 保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+            }
         }
 
         async function deleteAccident(accidentId) {
@@ -2518,12 +2536,19 @@
                                         <h4>${accident.type}</h4>
                                         <p class="record-date">${accident.date}</p>
                                     </div>
-                                    <button class="delete-btn" onclick="deleteAccident('${accident.id}')">
-                                        <svg width="20" height="20" viewBox="0 0 24 24">
-                                            <path d="M3 6h18" />
-                                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                        </svg>
-                                    </button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-secondary btn-small" onclick="editAccident('${accident.id}')" style="padding: 6px 10px;">
+                                            <svg width="16" height="16" viewBox="0 0 24 24">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </button>
+                                        <button class="delete-btn" onclick="deleteAccident('${accident.id}')">
+                                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                                <path d="M3 6h18" />
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="record-grid">
                                     <div class="record-item">
@@ -2883,11 +2908,14 @@
         }
 
         function renderAccidentForm() {
+            const accident = state.editingAccident;
+            const isEditing = accident !== null;
+            
             return `
                 <div class="modal-overlay" onclick="closeModal(event)">
                     <div class="modal" onclick="event.stopPropagation()">
                         <div class="modal-header">
-                            <h2>事故記録を追加</h2>
+                            <h2>${isEditing ? '事故記録を編集' : '事故記録を追加'}</h2>
                             <button class="close-btn" onclick="closeAccidentForm()">
                                 <svg width="24" height="24" viewBox="0 0 24 24">
                                     <path d="M18 6 6 18" />
@@ -2896,30 +2924,32 @@
                             </button>
                         </div>
                         <form class="modal-body" onsubmit="submitAccidentForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${accident.id}">` : ''}
                             <div class="form-group">
                                 <label>発生日</label>
-                                <input type="date" class="form-control" name="date" value="${new Date().toISOString().split('T')[0]}" required>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? accident.date : new Date().toISOString().split('T')[0]}" required>
                             </div>
                             <div class="form-group">
                                 <label>事故種類</label>
-                                <input type="text" class="form-control" name="type" placeholder="例: 単独事故、物損事故" required>
+                                <input type="text" class="form-control" name="type" placeholder="例: 単独事故、物損事故" value="${isEditing ? accident.type : ''}" required>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>場所</label>
-                                    <input type="text" class="form-control" name="location" placeholder="例: 札幌市中央区" required>
+                                    <input type="text" class="form-control" name="location" placeholder="例: 札幌市中央区" value="${isEditing ? accident.location : ''}" required>
                                 </div>
                                 <div class="form-group">
                                     <label>修理費 (円)</label>
-                                    <input type="number" class="form-control" name="repairCost" value="0" required>
+                                    <input type="number" class="form-control" name="repairCost" value="${isEditing ? accident.repairCost : 0}" required>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label>詳細</label>
-                                <textarea class="form-control" name="description" placeholder="事故の詳細を記入"></textarea>
+                                <textarea class="form-control" name="description" placeholder="事故の詳細を記入">${isEditing && accident.description ? accident.description : ''}</textarea>
                             </div>
                             <div class="form-group">
                                 <label>事故報告書（PDF）</label>
+                                ${isEditing && accident.pdfFile ? `<p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">現在: ${accident.pdfFile.name}</p>` : ''}
                                 <div class="file-upload">
                                     <input type="file" id="accident-pdf" accept="application/pdf" onchange="handleAccidentPDFUpload(event)">
                                     <label for="accident-pdf" class="file-upload-label">
@@ -2927,13 +2957,14 @@
                                             <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                                             <polyline points="14 2 14 8 20 8" />
                                         </svg>
-                                        PDFを選択
+                                        ${isEditing ? 'PDFを変更' : 'PDFを選択'}
                                     </label>
                                 </div>
                                 <div id="accident-pdf-preview"></div>
                             </div>
                             <div class="form-group">
                                 <label>ドラレコ映像（動画）</label>
+                                ${isEditing && accident.videoFile ? `<p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">現在: ${accident.videoFile.name}</p>` : ''}
                                 <div class="file-upload">
                                     <input type="file" id="accident-video" accept="video/*" onchange="handleAccidentVideoUpload(event)">
                                     <label for="accident-video" class="file-upload-label">
@@ -2941,7 +2972,7 @@
                                             <polygon points="23 7 16 12 23 17 23 7"/>
                                             <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
                                         </svg>
-                                        動画を選択
+                                        ${isEditing ? '動画を変更' : '動画を選択'}
                                     </label>
                                 </div>
                                 <div id="accident-video-preview"></div>
@@ -3148,14 +3179,27 @@
         }
 
         function openAddAccident() {
+            state.editingAccident = null;
             uploadedAccidentPDF = null;
             uploadedAccidentVideo = null;
             state.showAddAccident = true;
             render();
         }
 
+        function editAccident(accidentId) {
+            const accident = state.accidents.find(a => a.id === accidentId);
+            if (accident) {
+                state.editingAccident = accident;
+                uploadedAccidentPDF = accident.pdfFile || null;
+                uploadedAccidentVideo = accident.videoFile || null;
+                state.showAddAccident = true;
+                render();
+            }
+        }
+
         function closeAccidentForm() {
             state.showAddAccident = false;
+            state.editingAccident = null;
             uploadedAccidentPDF = null;
             uploadedAccidentVideo = null;
             render();
@@ -3407,8 +3451,10 @@
         function submitAccidentForm(event) {
             event.preventDefault();
             try {
+                console.log('📝 フォーム送信開始');
                 const formData = new FormData(event.target);
                 const accidentData = {
+                    id: formData.get('id') || `a${Date.now()}`,
                     date: formData.get('date'),
                     type: formData.get('type'),
                     location: formData.get('location'),
@@ -3417,10 +3463,11 @@
                     pdfFile: uploadedAccidentPDF,
                     videoFile: uploadedAccidentVideo
                 };
+                console.log('📦 送信データ:', accidentData);
                 saveAccident(accidentData);
             } catch (error) {
-                console.error('事故記録の保存エラー:', error);
-                alert('保存中にエラーが発生しました。もう一度お試しください。');
+                console.error('❌ フォーム送信エラー:', error);
+                alert('保存中にエラーが発生しました: ' + error.message);
             }
         }
 
