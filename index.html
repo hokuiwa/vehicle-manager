@@ -50,7 +50,7 @@
         }
 
         .logo {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0066cc 0%, #00a3e0 100%);
             padding: 10px;
             border-radius: 10px;
             display: flex;
@@ -61,7 +61,7 @@
         .header-title h1 {
             font-size: 22px;
             font-weight: 700;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0066cc 0%, #00a3e0 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -73,7 +73,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #0066cc 0%, #0080e0 100%);
             color: white;
             padding: 11px 20px;
             border-radius: 8px;
@@ -89,7 +89,7 @@
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 16px rgba(0, 102, 204, 0.3);
         }
 
         /* Container */
@@ -112,13 +112,7 @@
             border: 1px solid #e2e8f0;
             padding: 20px;
             border-radius: 12px;
-            transition: all 0.3s ease;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .stat-content {
@@ -314,6 +308,27 @@
 
         .btn-secondary:hover {
             background: #e2e8f0;
+        }
+
+        .btn-emergency {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+
+        .btn-emergency:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(220, 38, 38, 0.3);
         }
 
         .btn-danger {
@@ -761,7 +776,7 @@
             stroke-linejoin: round;
         }
 
-        .icon-blue { color: #3b82f6; }
+        .icon-blue { color: #0066cc; }
         .icon-amber { color: #f59e0b; }
         .icon-green { color: #10b981; }
         .icon-purple { color: #8b5cf6; }
@@ -998,6 +1013,7 @@
             showAddInspectionCert: false,
             showAddMaintenancePDF: false,
             showAddInsurance: false,
+            showEmergencyModal: false,
             editingRepair: null, // 編集中の修繕記録
             editingFuel: null, // 編集中の燃料記録
             editingAccident: null, // 編集中の事故記録
@@ -1249,7 +1265,7 @@
 
                 if (vehicleFuel.length > 0) {
                     datasets.push({
-                        label: vehicle.name,
+                        label: vehicle.number,
                         data: vehicleFuel.map(f => f.fuelEfficiency),
                         borderColor: colors[index % colors.length],
                         backgroundColor: colors[index % colors.length] + '20',
@@ -1277,7 +1293,7 @@
             const fuel = [];
 
             state.vehicles.forEach(vehicle => {
-                labels.push(vehicle.name);
+                labels.push(vehicle.number);
                 purchase.push(vehicle.purchasePrice || 0);
 
                 const vehicleRepairs = state.repairs.filter(r => r.vehicleId === vehicle.id);
@@ -1636,8 +1652,6 @@
                 
                 await loadData();
                 state.showAddAccident = false;
-                uploadedAccidentPDF = null;
-                uploadedAccidentVideo = null;
                 render();
             } catch (error) {
                 console.error('❌ 保存エラー:', error);
@@ -1685,6 +1699,7 @@
                 ${state.showAddFuel ? renderFuelForm() : ''}
                 ${state.showAddAccident ? renderAccidentForm() : ''}
                 ${state.showAddDocument ? renderDocumentForm() : ''}
+                ${state.showEmergencyModal ? renderEmergencyModal() : ''}
             `;
 
             // Redraw charts after rendering dashboard
@@ -1712,6 +1727,14 @@
                             </div>
                         </div>
                         <div style="display: flex; gap: 12px; align-items: center;">
+                            <button class="btn-emergency" onclick="openEmergencyModal()" title="緊急時対応">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                                    <path d="M12 9v4" />
+                                    <path d="M12 17h.01" />
+                                </svg>
+                                <span>緊急時対応</span>
+                            </button>
                             <button class="btn-secondary" onclick="showNotificationSettings()" title="通知設定">
                                 <svg width="18" height="18" viewBox="0 0 24 24">
                                     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
@@ -1851,7 +1874,7 @@
                         <div class="stat-content">
                             <div>
                                 <p class="stat-label">総修繕費</p>
-                                <p class="stat-value">¥${(costs.repairs / 1000).toFixed(0)}K</p>
+                                <p class="stat-value">¥${costs.repairs.toLocaleString()}</p>
                                 <p style="font-size: 12px; color: #64748b; margin-top: 4px;">今月: ¥${costs.thisMonthRepairs.toLocaleString()}</p>
                             </div>
                             <svg class="icon-amber" width="32" height="32" viewBox="0 0 24 24">
@@ -1863,7 +1886,7 @@
                         <div class="stat-content">
                             <div>
                                 <p class="stat-label">総燃料費</p>
-                                <p class="stat-value">¥${(costs.fuel / 1000).toFixed(0)}K</p>
+                                <p class="stat-value">¥${costs.fuel.toLocaleString()}</p>
                                 <p style="font-size: 12px; color: #64748b; margin-top: 4px;">今月: ¥${costs.thisMonthFuel.toLocaleString()}</p>
                             </div>
                             <svg class="icon-green" width="32" height="32" viewBox="0 0 24 24">
@@ -1903,7 +1926,7 @@
                         <div class="stat-content">
                             <div>
                                 <p class="stat-label">今月の総コスト</p>
-                                <p class="stat-value">¥${(costs.thisMonthTotal / 1000).toFixed(0)}K</p>
+                                <p class="stat-value">¥${costs.thisMonthTotal.toLocaleString()}</p>
                                 <p style="font-size: 12px; color: #64748b; margin-top: 4px;">修繕 + 燃料</p>
                             </div>
                             <svg class="icon-blue" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2442,10 +2465,6 @@
                                         <div class="value mono">¥${repair.cost.toLocaleString()}</div>
                                     </div>
                                     <div class="record-item">
-                                        <label>走行距離</label>
-                                        <div class="value mono">${repair.mileage.toLocaleString()} km</div>
-                                    </div>
-                                    <div class="record-item">
                                         <label>工場名</label>
                                         <div class="value">${repair.garage}</div>
                                     </div>
@@ -2562,32 +2581,7 @@
                                     ${accident.description ? `
                                         <div class="record-item" style="grid-column: 1 / -1;">
                                             <label>詳細</label>
-                                            <div class="value">${accident.description}</div>
-                                        </div>
-                                    ` : ''}
-                                    ${accident.pdfFile || accident.videoFile ? `
-                                        <div class="record-item" style="grid-column: 1 / -1;">
-                                            <label>添付ファイル</label>
-                                            <div style="display: flex; gap: 12px; margin-top: 8px;">
-                                                ${accident.pdfFile ? `
-                                                    <button class="btn-secondary" onclick="viewFile('${accident.pdfFile.data}', 'pdf', '${accident.pdfFile.name}')" style="padding: 8px 12px;">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24">
-                                                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                                                            <polyline points="14 2 14 8 20 8" />
-                                                        </svg>
-                                                        <span>事故報告書PDF</span>
-                                                    </button>
-                                                ` : ''}
-                                                ${accident.videoFile ? `
-                                                    <button class="btn-secondary" onclick="viewFile('${accident.videoFile.data}', 'video', '${accident.videoFile.name}')" style="padding: 8px 12px;">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24">
-                                                            <polygon points="23 7 16 12 23 17 23 7"/>
-                                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                                                        </svg>
-                                                        <span>ドラレコ映像</span>
-                                                    </button>
-                                                ` : ''}
-                                            </div>
+                                            <div class="value" style="white-space: pre-wrap;">${accident.description}</div>
                                         </div>
                                     ` : ''}
                                 </div>
@@ -2752,9 +2746,6 @@
                                     <input type="number" class="form-control" name="year" value="${vehicle ? vehicle.year : new Date().getFullYear()}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>走行距離 (km)</label>
-                                    <input type="number" class="form-control" name="mileage" value="${vehicle ? vehicle.mileage : 0}" required>
-                                </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
@@ -2817,15 +2808,9 @@
                                 <label>作業内容</label>
                                 <input type="text" class="form-control" name="type" placeholder="例: オイル交換" value="${isEditing ? repair.type : ''}" required>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>費用 (円)</label>
-                                    <input type="number" class="form-control" name="cost" value="${isEditing ? repair.cost : 0}" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>走行距離 (km)</label>
-                                    <input type="number" class="form-control" name="mileage" value="${isEditing ? repair.mileage : 0}" required>
-                                </div>
+                            <div class="form-group">
+                                <label>費用 (円)</label>
+                                <input type="number" class="form-control" name="cost" value="${isEditing ? repair.cost : 0}" required>
                             </div>
                             <div class="form-group">
                                 <label>工場名</label>
@@ -2884,9 +2869,6 @@
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label>走行距離 (km)</label>
-                                    <input type="number" class="form-control" name="mileage" value="${isEditing ? fuel.mileage : 0}" required>
-                                </div>
                                 <div class="form-group">
                                     <label>燃費 (km/L)</label>
                                     <input type="number" step="0.1" class="form-control" name="fuelEfficiency" value="${isEditing ? fuel.fuelEfficiency : 0}" required>
@@ -2945,37 +2927,12 @@
                             </div>
                             <div class="form-group">
                                 <label>詳細</label>
-                                <textarea class="form-control" name="description" placeholder="事故の詳細を記入">${isEditing && accident.description ? accident.description : ''}</textarea>
+                                <textarea class="form-control" name="description" placeholder="事故の詳細、報告書の保存場所、ドラレコ映像の場所などを記入" rows="4">${isEditing && accident.description ? accident.description : ''}</textarea>
                             </div>
-                            <div class="form-group">
-                                <label>事故報告書（PDF）</label>
-                                ${isEditing && accident.pdfFile ? `<p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">現在: ${accident.pdfFile.name}</p>` : ''}
-                                <div class="file-upload">
-                                    <input type="file" id="accident-pdf" accept="application/pdf" onchange="handleAccidentPDFUpload(event)">
-                                    <label for="accident-pdf" class="file-upload-label">
-                                        <svg width="18" height="18" viewBox="0 0 24 24">
-                                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                                            <polyline points="14 2 14 8 20 8" />
-                                        </svg>
-                                        ${isEditing ? 'PDFを変更' : 'PDFを選択'}
-                                    </label>
-                                </div>
-                                <div id="accident-pdf-preview"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>ドラレコ映像（動画）</label>
-                                ${isEditing && accident.videoFile ? `<p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">現在: ${accident.videoFile.name}</p>` : ''}
-                                <div class="file-upload">
-                                    <input type="file" id="accident-video" accept="video/*" onchange="handleAccidentVideoUpload(event)">
-                                    <label for="accident-video" class="file-upload-label">
-                                        <svg width="18" height="18" viewBox="0 0 24 24">
-                                            <polygon points="23 7 16 12 23 17 23 7"/>
-                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                                        </svg>
-                                        ${isEditing ? '動画を変更' : '動画を選択'}
-                                    </label>
-                                </div>
-                                <div id="accident-video-preview"></div>
+                            <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 12px; margin-top: 16px;">
+                                <p style="font-size: 13px; color: #1e40af; margin: 0;">
+                                    💡 <strong>ヒント:</strong> PDFや動画ファイルは社内サーバーやGoogleドライブに保存し、そのリンクを詳細欄に記載することをおすすめします！
+                                </p>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn-secondary" onclick="closeAccidentForm()">キャンセル</button>
@@ -3035,6 +2992,70 @@
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderEmergencyModal() {
+            return `
+                <div class="modal-overlay" onclick="closeEmergencyModal()">
+                    <div class="modal" onclick="event.stopPropagation()" style="max-width: 800px;">
+                        <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white;">
+                            <h2 style="color: white;">🚨 緊急時対応マニュアル</h2>
+                            <button class="close-btn" onclick="closeEmergencyModal()" style="color: white;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding: 32px;">
+                            <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <h3 style="color: #dc2626; margin-bottom: 16px; font-size: 18px;">📋 事故発生時の対応手順</h3>
+                                <ol style="margin: 0; padding-left: 24px; line-height: 2;">
+                                    <li><strong>負傷者の救護</strong> - 必要に応じて119番通報</li>
+                                    <li><strong>二次災害防止</strong> - 車を安全な場所へ移動、三角表示板設置</li>
+                                    <li><strong>警察へ通報</strong> - 110番で事故状況を報告</li>
+                                    <li><strong>相手方情報の確認</strong> - 氏名、連絡先、車両番号、保険会社</li>
+                                    <li><strong>現場記録</strong> - 写真撮影（車両損傷、事故現場、ブレーキ痕等）</li>
+                                    <li><strong>保険会社へ連絡</strong> - 速やかに事故報告</li>
+                                    <li><strong>会社へ報告</strong> - 担当者に連絡</li>
+                                </ol>
+                            </div>
+
+                            <div style="background: #dbeafe; border: 2px solid #93c5fd; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <h3 style="color: #0066cc; margin-bottom: 16px; font-size: 18px;">📞 緊急連絡先</h3>
+                                <div style="display: grid; gap: 12px;">
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>🚨 緊急通報（救急）</strong></span>
+                                        <a href="tel:119" style="color: #dc2626; text-decoration: none; font-weight: bold;">119</a>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>🚓 警察（事故）</strong></span>
+                                        <a href="tel:110" style="color: #dc2626; text-decoration: none; font-weight: bold;">110</a>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>📞 保険会社</strong></span>
+                                        <span style="color: #0066cc; font-weight: bold;">[保険会社の電話番号]</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>🚗 レッカー・ロードサービス</strong></span>
+                                        <span style="color: #0066cc; font-weight: bold;">[ロードサービスの電話番号]</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>🏢 会社担当者</strong></span>
+                                        <span style="color: #0066cc; font-weight: bold;">[担当者の電話番号]</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: #fef3c7; border: 2px solid #fcd34d; border-radius: 12px; padding: 16px;">
+                                <p style="margin: 0; color: #92400e; font-size: 14px;">
+                                    💡 <strong>ヒント:</strong> この緊急連絡先は編集できません。実際の電話番号を紙に書いて車内に保管することをおすすめします。
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -3180,8 +3201,6 @@
 
         function openAddAccident() {
             state.editingAccident = null;
-            uploadedAccidentPDF = null;
-            uploadedAccidentVideo = null;
             state.showAddAccident = true;
             render();
         }
@@ -3190,8 +3209,6 @@
             const accident = state.accidents.find(a => a.id === accidentId);
             if (accident) {
                 state.editingAccident = accident;
-                uploadedAccidentPDF = accident.pdfFile || null;
-                uploadedAccidentVideo = accident.videoFile || null;
                 state.showAddAccident = true;
                 render();
             }
@@ -3200,8 +3217,6 @@
         function closeAccidentForm() {
             state.showAddAccident = false;
             state.editingAccident = null;
-            uploadedAccidentPDF = null;
-            uploadedAccidentVideo = null;
             render();
         }
 
@@ -3373,6 +3388,16 @@
             render();
         }
 
+        function openEmergencyModal() {
+            state.showEmergencyModal = true;
+            render();
+        }
+
+        function closeEmergencyModal() {
+            state.showEmergencyModal = false;
+            render();
+        }
+
         function closeModal(event) {
             if (event.target.classList.contains('modal-overlay')) {
                 if (state.showAddVehicle) closeVehicleForm();
@@ -3427,7 +3452,6 @@
                 date: formData.get('date'),
                 type: formData.get('type'),
                 cost: parseInt(formData.get('cost')),
-                mileage: parseInt(formData.get('mileage')),
                 garage: formData.get('garage'),
                 notes: formData.get('notes')
             };
@@ -3459,9 +3483,7 @@
                     type: formData.get('type'),
                     location: formData.get('location'),
                     repairCost: parseInt(formData.get('repairCost')) || 0,
-                    description: formData.get('description'),
-                    pdfFile: uploadedAccidentPDF,
-                    videoFile: uploadedAccidentVideo
+                    description: formData.get('description')
                 };
                 console.log('📦 送信データ:', accidentData);
                 saveAccident(accidentData);
