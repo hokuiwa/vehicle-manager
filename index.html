@@ -1340,10 +1340,16 @@
                     for (const key of repairKeys.keys) {
                         try {
                             const result = storage.get(key);
-                            if (result) loadedRepairs.push(JSON.parse(result.value));
-                        } catch (err) {}
+                            if (result) {
+                                const parsed = JSON.parse(result.value);
+                                loadedRepairs.push(parsed);
+                            }
+                        } catch (err) {
+                            console.error('⚠️ 修繕データ読み込みエラー:', key, err);
+                        }
                     }
                 }
+                console.log('🔧 読み込んだ修繕記録:', loadedRepairs.length, '件');
                 state.repairs = loadedRepairs;
 
                 // Load fuel records
@@ -1353,10 +1359,16 @@
                     for (const key of fuelKeys.keys) {
                         try {
                             const result = storage.get(key);
-                            if (result) loadedFuel.push(JSON.parse(result.value));
-                        } catch (err) {}
+                            if (result) {
+                                const parsed = JSON.parse(result.value);
+                                loadedFuel.push(parsed);
+                            }
+                        } catch (err) {
+                            console.error('⚠️ 燃料データ読み込みエラー:', key, err);
+                        }
                     }
                 }
+                console.log('⛽ 読み込んだ燃料記録:', loadedFuel.length, '件');
                 state.fuelRecords = loadedFuel;
 
                 // Load accidents
@@ -1590,16 +1602,32 @@
         }
 
         async function saveRepair(repairData) {
-            const newRepair = {
-                ...repairData,
-                id: repairData.id || `r${Date.now()}`,
-                vehicleId: state.selectedVehicle.id
-            };
-            
-            storage.set(`repair:${newRepair.id}`, JSON.stringify(newRepair));
-            await loadData();
-            state.showAddRepair = false;
-            render();
+            try {
+                console.log('🔧 修繕記録保存開始:', repairData);
+                
+                if (!state.selectedVehicle) {
+                    alert('車両が選択されていません');
+                    return;
+                }
+                
+                const newRepair = {
+                    ...repairData,
+                    id: repairData.id || `r${Date.now()}`,
+                    vehicleId: state.selectedVehicle.id
+                };
+                
+                console.log('💾 保存データ:', newRepair);
+                storage.set(`repair:${newRepair.id}`, JSON.stringify(newRepair));
+                console.log('✅ 修繕記録保存成功');
+                
+                await loadData();
+                state.showAddRepair = false;
+                state.editingRepair = null;
+                render();
+            } catch (error) {
+                console.error('❌ 修繕記録保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+            }
         }
 
         async function deleteRepair(repairId) {
@@ -1610,16 +1638,32 @@
         }
 
         async function saveFuel(fuelData) {
-            const newFuel = {
-                ...fuelData,
-                id: fuelData.id || `f${Date.now()}`,
-                vehicleId: state.selectedVehicle.id
-            };
-            
-            storage.set(`fuel:${newFuel.id}`, JSON.stringify(newFuel));
-            await loadData();
-            state.showAddFuel = false;
-            render();
+            try {
+                console.log('⛽ 燃料記録保存開始:', fuelData);
+                
+                if (!state.selectedVehicle) {
+                    alert('車両が選択されていません');
+                    return;
+                }
+                
+                const newFuel = {
+                    ...fuelData,
+                    id: fuelData.id || `f${Date.now()}`,
+                    vehicleId: state.selectedVehicle.id
+                };
+                
+                console.log('💾 保存データ:', newFuel);
+                storage.set(`fuel:${newFuel.id}`, JSON.stringify(newFuel));
+                console.log('✅ 燃料記録保存成功');
+                
+                await loadData();
+                state.showAddFuel = false;
+                state.editingFuel = null;
+                render();
+            } catch (error) {
+                console.error('❌ 燃料記録保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+            }
         }
 
         async function deleteFuel(fuelId) {
@@ -3413,12 +3457,14 @@
             state.activeView = 'detail';
             state.activeTab = 'basic';
             render();
+            window.scrollTo(0, 0);
         }
 
         function backToDashboard() {
             state.activeView = 'dashboard';
             state.selectedVehicle = null;
             render();
+            window.scrollTo(0, 0);
         }
 
         function switchTab(tabName) {
