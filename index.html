@@ -1193,6 +1193,171 @@
             input.click();
         }
 
+        function importFuelCSV() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const csv = event.target.result;
+                        const lines = csv.split('\n');
+                        
+                        let importCount = 0;
+                        let inFuelSection = false;
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            
+                            if (line === '=== 燃料記録 ===') {
+                                inFuelSection = true;
+                                i++; // Skip header line
+                                continue;
+                            }
+                            
+                            if (line.startsWith('===') && inFuelSection) {
+                                break; // End of fuel section
+                            }
+                            
+                            if (inFuelSection && line) {
+                                const parts = line.split('\t').map(p => p.trim()); // タブ区切り
+                                if (parts.length >= 6) {
+                                    // 車両番号から車両IDを取得
+                                    const vehicleNumber = parts[0];
+                                    const vehicle = state.vehicles.find(v => v.number === vehicleNumber);
+                                    
+                                    if (vehicle) {
+                                        // 日付を変換 (2025/12/1 → 2025-12-01)
+                                        const dateParts = parts[1].split('/');
+                                        const formattedDate = dateParts.length === 3 
+                                            ? `${dateParts[0]}-${dateParts[1].padStart(2, '0')}-${dateParts[2].padStart(2, '0')}`
+                                            : parts[1];
+                                        
+                                        const fuelData = {
+                                            id: `f${Date.now()}_${importCount}`,
+                                            vehicleId: vehicle.id,
+                                            date: formattedDate,
+                                            liters: parseFloat(parts[2]) || 0,
+                                            cost: parseInt(parts[3]) || 0,
+                                            mileage: parseInt(parts[4]) || 0,
+                                            fuelEfficiency: parseFloat(parts[5]) || 0
+                                        };
+                                        
+                                        storage.set(`fuel:${fuelData.id}`, JSON.stringify(fuelData));
+                                        importCount++;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        alert(`✅ ${importCount}件の燃料記録をインポートしました！`);
+                        await loadData();
+                        render();
+                    } catch (error) {
+                        console.error('❌ インポートエラー:', error);
+                        alert('インポートに失敗しました: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function importRepairsCSV() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const csv = event.target.result;
+                        const lines = csv.split('\n');
+                        
+                        let importCount = 0;
+                        let inRepairSection = false;
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            
+                            if (line === '=== 修繕記録 ===') {
+                                inRepairSection = true;
+                                i++; // Skip header line
+                                continue;
+                            }
+                            
+                            if (line.startsWith('===') && inRepairSection) {
+                                break; // End of repair section
+                            }
+                            
+                            if (inRepairSection && line) {
+                                const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, '')); // カンマ区切り、引用符削除
+                                if (parts.length >= 5) {
+                                    // 車両番号から車両IDを取得
+                                    const vehicleNumber = parts[0];
+                                    const vehicle = state.vehicles.find(v => v.number === vehicleNumber);
+                                    
+                                    if (vehicle) {
+                                        const repairData = {
+                                            id: `r${Date.now()}_${importCount}`,
+                                            vehicleId: vehicle.id,
+                                            date: parts[1],
+                                            type: parts[2],
+                                            cost: parseInt(parts[3]) || 0,
+                                            garage: parts[4],
+                                            notes: parts[5] || ''
+                                        };
+                                        
+                                        storage.set(`repair:${repairData.id}`, JSON.stringify(repairData));
+                                        importCount++;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        alert(`✅ ${importCount}件の修繕記録をインポートしました！`);
+                        await loadData();
+                        render();
+                    } catch (error) {
+                        console.error('❌ インポートエラー:', error);
+                        alert('インポートに失敗しました: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function showImportMenu() {
+            const menu = `
+インポートするデータを選択してください:
+
+1️⃣ 車両情報
+2️⃣ 燃料記録
+3️⃣ 修繕記録
+
+番号を入力してください (1/2/3):`;
+            
+            const choice = prompt(menu);
+            
+            if (choice === '1') {
+                importVehiclesCSV();
+            } else if (choice === '2') {
+                importFuelCSV();
+            } else if (choice === '3') {
+                importRepairsCSV();
+            } else if (choice !== null) {
+                alert('❌ 無効な選択です。1、2、または3を入力してください。');
+            }
+        }
+
         // Initialize
         async function init() {
             try {
@@ -2003,7 +2168,7 @@
                                         <line x1="12" x2="12" y1="15" y2="3" />
                                     </svg>
                                 </button>
-                                <button class="btn-secondary" onclick="importVehiclesCSV()" title="CSV一括登録">
+                                <button class="btn-secondary" onclick="showImportMenu()" title="CSVインポート">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                         <polyline points="17 8 12 3 7 8" />
