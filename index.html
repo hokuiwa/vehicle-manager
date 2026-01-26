@@ -331,6 +331,19 @@
             box-shadow: 0 8px 16px rgba(220, 38, 38, 0.3);
         }
 
+        .btn-group {
+            display: flex;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .btn-group .btn-secondary {
+            padding: 8px 12px;
+            margin: 0;
+        }
+
         .btn-danger {
             background: #fee2e2;
             color: #dc2626;
@@ -1023,6 +1036,158 @@
             filterMonth: 'all'
         };
 
+        // Backup and CSV functions
+        function createAutoBackup() {
+            try {
+                const backup = {
+                    vehicles: state.vehicles,
+                    repairs: state.repairs,
+                    fuelRecords: state.fuelRecords,
+                    accidents: state.accidents,
+                    timestamp: new Date().toISOString(),
+                    version: '1.0'
+                };
+                localStorage.setItem('vehicle_backup', JSON.stringify(backup));
+                console.log('✅ 自動バックアップ完了');
+            } catch (error) {
+                console.error('⚠️ バックアップ失敗:', error);
+            }
+        }
+
+        function restoreBackup() {
+            if (!confirm('バックアップからデータを復元しますか？\n現在のデータは上書きされます。')) return;
+            
+            try {
+                const backupData = localStorage.getItem('vehicle_backup');
+                if (!backupData) {
+                    alert('バックアップが見つかりません');
+                    return;
+                }
+                
+                const backup = JSON.parse(backupData);
+                
+                // Restore all data
+                backup.vehicles.forEach(v => storage.set(`vehicle:${v.id}`, JSON.stringify(v)));
+                backup.repairs.forEach(r => storage.set(`repair:${r.id}`, JSON.stringify(r)));
+                backup.fuelRecords.forEach(f => storage.set(`fuel:${f.id}`, JSON.stringify(f)));
+                backup.accidents.forEach(a => storage.set(`accident:${a.id}`, JSON.stringify(a)));
+                
+                alert('✅ バックアップから復元しました！\nバックアップ日時: ' + new Date(backup.timestamp).toLocaleString('ja-JP'));
+                location.reload();
+            } catch (error) {
+                console.error('❌ 復元エラー:', error);
+                alert('復元に失敗しました: ' + error.message);
+            }
+        }
+
+        function exportAllDataCSV() {
+            try {
+                // Export vehicles
+                let csvContent = "data:text/csv;charset=utf-8,";
+                
+                // Vehicles
+                csvContent += "=== 車両情報 ===\n";
+                csvContent += "車両番号,車両名,年式,走行距離,購入金額,購入日,車検日,保険更新日\n";
+                state.vehicles.forEach(v => {
+                    csvContent += `${v.number},${v.name},${v.year},${v.mileage},${v.purchasePrice},${v.purchaseDate},${v.inspectionDate},${v.insuranceDate}\n`;
+                });
+                
+                csvContent += "\n=== 修繕記録 ===\n";
+                csvContent += "車両番号,日付,作業内容,費用,工場名,備考\n";
+                state.repairs.forEach(r => {
+                    const vehicle = state.vehicles.find(v => v.id === r.vehicleId);
+                    csvContent += `${vehicle?.number || ''},${r.date},${r.type},${r.cost},${r.garage},"${r.notes || ''}"\n`;
+                });
+                
+                csvContent += "\n=== 燃料記録 ===\n";
+                csvContent += "車両番号,日付,給油量,費用,走行距離,燃費\n";
+                state.fuelRecords.forEach(f => {
+                    const vehicle = state.vehicles.find(v => v.id === f.vehicleId);
+                    csvContent += `${vehicle?.number || ''},${f.date},${f.liters},${f.cost},${f.mileage},${f.fuelEfficiency}\n`;
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `車両管理データ_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alert('✅ CSVファイルをダウンロードしました！');
+            } catch (error) {
+                console.error('❌ エクスポートエラー:', error);
+                alert('エクスポートに失敗しました: ' + error.message);
+            }
+        }
+
+        function importVehiclesCSV() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const csv = event.target.result;
+                        const lines = csv.split('\n');
+                        
+                        let importCount = 0;
+                        let inVehicleSection = false;
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            
+                            if (line === '=== 車両情報 ===') {
+                                inVehicleSection = true;
+                                i++; // Skip header line
+                                continue;
+                            }
+                            
+                            if (line.startsWith('===') && inVehicleSection) {
+                                break; // End of vehicle section
+                            }
+                            
+                            if (inVehicleSection && line) {
+                                const parts = line.split(',');
+                                if (parts.length >= 8) {
+                                    const vehicleData = {
+                                        id: `v${Date.now()}_${importCount}`,
+                                        number: parts[0],
+                                        name: parts[1],
+                                        year: parseInt(parts[2]) || 0,
+                                        mileage: parseInt(parts[3]) || 0,
+                                        purchasePrice: parseInt(parts[4]) || 0,
+                                        purchaseDate: parts[5],
+                                        inspectionDate: parts[6],
+                                        insuranceDate: parts[7],
+                                        image: null,
+                                        editedBy: state.currentUser,
+                                        editedAt: new Date().toISOString()
+                                    };
+                                    
+                                    storage.set(`vehicle:${vehicleData.id}`, JSON.stringify(vehicleData));
+                                    importCount++;
+                                }
+                            }
+                        }
+                        
+                        alert(`✅ ${importCount}台の車両をインポートしました！`);
+                        await loadData();
+                        render();
+                    } catch (error) {
+                        console.error('❌ インポートエラー:', error);
+                        alert('インポートに失敗しました: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
         // Initialize
         async function init() {
             await loadData();
@@ -1571,17 +1736,31 @@
 
         // Actions
         async function saveVehicle(vehicleData) {
-            const newVehicle = {
-                ...vehicleData,
-                id: vehicleData.id || `v${Date.now()}`,
-                editedBy: state.currentUser,
-                editedAt: new Date().toISOString()
-            };
-            
-            storage.set(`vehicle:${newVehicle.id}`, JSON.stringify(newVehicle));
-            await loadData();
-            state.showAddVehicle = false;
-            render();
+            try {
+                console.log('🚗 車両保存開始:', vehicleData);
+                
+                const newVehicle = {
+                    ...vehicleData,
+                    id: vehicleData.id || `v${Date.now()}`,
+                    editedBy: state.currentUser,
+                    editedAt: new Date().toISOString()
+                };
+                
+                console.log('💾 保存データ:', newVehicle);
+                storage.set(`vehicle:${newVehicle.id}`, JSON.stringify(newVehicle));
+                console.log('✅ 車両保存成功');
+                
+                // 自動バックアップ
+                createAutoBackup();
+                
+                await loadData();
+                state.showAddVehicle = false;
+                uploadedImage = null;
+                render();
+            } catch (error) {
+                console.error('❌ 車両保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+            }
         }
 
         async function deleteVehicle(vehicleId) {
@@ -1779,6 +1958,30 @@
                                 </svg>
                                 <span>緊急時対応</span>
                             </button>
+                            <div class="btn-group">
+                                <button class="btn-secondary" onclick="exportAllDataCSV()" title="CSVエクスポート">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="7 10 12 15 17 10" />
+                                        <line x1="12" x2="12" y1="15" y2="3" />
+                                    </svg>
+                                </button>
+                                <button class="btn-secondary" onclick="importVehiclesCSV()" title="CSV一括登録">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="17 8 12 3 7 8" />
+                                        <line x1="12" x2="12" y1="3" y2="15" />
+                                    </svg>
+                                </button>
+                                <button class="btn-secondary" onclick="restoreBackup()" title="バックアップ復元">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                                        <path d="M21 3v5h-5" />
+                                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                                        <path d="M3 21v-5h5" />
+                                    </svg>
+                                </button>
+                            </div>
                             <button class="btn-secondary" onclick="showNotificationSettings()" title="通知設定">
                                 <svg width="18" height="18" viewBox="0 0 24 24">
                                     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
@@ -3472,22 +3675,39 @@
             render();
         }
 
+        let isSubmitting = false;
+
         function submitVehicleForm(event) {
             event.preventDefault();
-            const formData = new FormData(event.target);
-            const vehicleData = {
-                id: state.selectedVehicle?.id,
-                number: formData.get('number'),
-                name: formData.get('name'),
-                year: parseInt(formData.get('year')),
-                mileage: parseInt(formData.get('mileage')),
-                purchasePrice: parseInt(formData.get('purchasePrice')),
-                purchaseDate: formData.get('purchaseDate'),
-                inspectionDate: formData.get('inspectionDate'),
-                insuranceDate: formData.get('insuranceDate'),
-                image: uploadedImage || state.selectedVehicle?.image || null
-            };
-            saveVehicle(vehicleData);
+            
+            // 二重送信防止
+            if (isSubmitting) {
+                console.log('⚠️ 二重送信を防止しました');
+                return;
+            }
+            isSubmitting = true;
+            
+            try {
+                const formData = new FormData(event.target);
+                const vehicleData = {
+                    id: state.selectedVehicle?.id,
+                    number: formData.get('number'),
+                    name: formData.get('name'),
+                    year: parseInt(formData.get('year')),
+                    mileage: parseInt(formData.get('mileage')),
+                    purchasePrice: parseInt(formData.get('purchasePrice')),
+                    purchaseDate: formData.get('purchaseDate'),
+                    inspectionDate: formData.get('inspectionDate'),
+                    insuranceDate: formData.get('insuranceDate'),
+                    image: uploadedImage || state.selectedVehicle?.image || null
+                };
+                saveVehicle(vehicleData).finally(() => {
+                    isSubmitting = false;
+                });
+            } catch (error) {
+                console.error('❌ フォーム送信エラー:', error);
+                isSubmitting = false;
+            }
         }
 
         function submitRepairForm(event) {
