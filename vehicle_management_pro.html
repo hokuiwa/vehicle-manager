@@ -1,0 +1,4035 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>車両管理システム Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Barlow', sans-serif;
+        }
+
+        body {
+            background: #f8fafc;
+            color: #1e293b;
+            min-height: 100vh;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            background: linear-gradient(135deg, #0066cc 0%, #00a3e0 100%);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-title h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0066cc 0%, #00a3e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0066cc 0%, #0080e0 100%);
+            color: white;
+            padding: 11px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 102, 204, 0.3);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* Vehicle Cards */
+        .vehicles-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .vehicles-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .vehicles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 24px;
+        }
+
+        .vehicle-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .vehicle-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6;
+        }
+
+        .vehicle-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .vehicle-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .vehicle-image-placeholder {
+            color: #94a3b8;
+            font-size: 48px;
+        }
+
+        .inspection-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #fef3c7;
+            color: #d97706;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .vehicle-content {
+            padding: 20px;
+        }
+
+        .vehicle-title {
+            margin-bottom: 16px;
+        }
+
+        .vehicle-title h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #1e293b;
+        }
+
+        .vehicle-number {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .vehicle-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .vehicle-info-item {
+            font-size: 13px;
+        }
+
+        .vehicle-info-item label {
+            color: #64748b;
+            display: block;
+            margin-bottom: 2px;
+            font-weight: 500;
+        }
+
+        .vehicle-info-item .value {
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .vehicle-footer {
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        /* Detail View */
+        .detail-view {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: #3b82f6;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s;
+        }
+
+        .back-button:hover {
+            color: #2563eb;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-emergency {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+
+        .btn-emergency:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .btn-group .btn-secondary {
+            padding: 8px 12px;
+            margin: 0;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+
+        .detail-main-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .detail-card-header {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 32px;
+            align-items: start;
+        }
+
+        .detail-image {
+            width: 200px;
+            height: 150px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .detail-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .detail-title-section {
+            flex: 1;
+        }
+
+        .detail-title-section h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .detail-subtitle {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 16px;
+        }
+
+        .detail-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 24px;
+        }
+
+        .detail-info-item label {
+            color: #64748b;
+            font-size: 13px;
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .detail-info-item .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .tabs-header {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .tab-button {
+            padding: 16px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            position: relative;
+            top: 2px;
+        }
+
+        .tab-button:hover {
+            color: #3b82f6;
+            background: white;
+        }
+
+        .tab-button.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            background: white;
+        }
+
+        .tab-content {
+            padding: 24px;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Records List */
+        .records-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .records-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .record-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 16px;
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .record-title h4 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .record-date {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.3s;
+        }
+
+        .delete-btn:hover {
+            color: #dc2626;
+        }
+
+        .record-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .record-item label {
+            color: #64748b;
+            font-size: 13px;
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .record-item .value {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* Documents */
+        .document-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .document-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+
+        .document-card:hover {
+            background: white;
+            border-color: #3b82f6;
+        }
+
+        .document-icon {
+            width: 48px;
+            height: 48px;
+            background: #dbeafe;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #3b82f6;
+        }
+
+        .document-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .document-info p {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 100;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 640px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #1e293b;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+
+        .form-control {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+            padding: 11px 14px;
+            border-radius: 8px;
+            width: 100%;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            outline: none;
+            background: white;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .file-upload {
+            position: relative;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .file-upload-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            transition: all 0.3s;
+        }
+
+        .file-upload-label:hover {
+            background: #e2e8f0;
+        }
+
+        .file-preview {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-preview img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: #64748b;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #1e293b;
+        }
+
+        /* Icons */
+        svg {
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .icon-blue { color: #0066cc; }
+        .icon-amber { color: #f59e0b; }
+        .icon-green { color: #10b981; }
+        .icon-purple { color: #8b5cf6; }
+        .icon-red { color: #ef4444; }
+
+        /* Alerts */
+        .alert-banner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
+        }
+
+        .alert-banner.critical {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-left-color: #ef4444;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* Charts */
+        .chart-section {
+            margin-bottom: 32px;
+            margin-top: 48px;
+        }
+
+        .chart-container {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .chart-canvas {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .toolbar-right {
+            display: flex;
+            gap: 12px;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 14px 10px 38px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #f8fafc;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: white;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+        }
+
+        .btn-export {
+            background: #10b981;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-export:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: white;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .toolbar-left {
+                flex-direction: column;
+            }
+
+            .search-box {
+                max-width: none;
+            }
+
+            .toolbar-right {
+                justify-content: stretch;
+            }
+
+            .btn-export {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        // Storage
+        const storage = {
+            get(key) {
+                const value = localStorage.getItem(key);
+                return value ? { value, key } : null;
+            },
+            set(key, value) {
+                localStorage.setItem(key, value);
+                return { key, value };
+            },
+            delete(key) {
+                localStorage.removeItem(key);
+                return { key, deleted: true };
+            },
+            list(prefix) {
+                const keys = Object.keys(localStorage).filter(k => k.startsWith(prefix));
+                return { keys };
+            }
+        };
+
+        // State
+        let state = {
+            vehicles: [],
+            repairs: [],
+            fuelRecords: [],
+            accidents: [],
+            documents: [],
+            inspectionCerts: [], // 車検証
+            maintenancePDFs: [], // 点検記録
+            insuranceRecords: [], // 保険記録
+            selectedVehicle: null,
+            activeView: 'dashboard',
+            activeTab: 'basic',
+            showAddVehicle: false,
+            showAddRepair: false,
+            showAddFuel: false,
+            showAddAccident: false,
+            showAddDocument: false,
+            showAddInspectionCert: false,
+            showAddMaintenancePDF: false,
+            showAddInsurance: false,
+            showEmergencyModal: false,
+            editingRepair: null, // 編集中の修繕記録
+            editingFuel: null, // 編集中の燃料記録
+            editingAccident: null, // 編集中の事故記録
+            isLoading: true,
+            currentUser: 'システム管理者',
+            searchQuery: '',
+            filterMonth: 'all'
+        };
+
+        // Backup and CSV functions
+        function createAutoBackup() {
+            try {
+                const backup = {
+                    vehicles: state.vehicles,
+                    repairs: state.repairs,
+                    fuelRecords: state.fuelRecords,
+                    accidents: state.accidents,
+                    timestamp: new Date().toISOString(),
+                    version: '1.0'
+                };
+                localStorage.setItem('vehicle_backup', JSON.stringify(backup));
+                console.log('✅ 自動バックアップ完了');
+            } catch (error) {
+                console.error('⚠️ バックアップ失敗:', error);
+            }
+        }
+
+        function restoreBackup() {
+            if (!confirm('バックアップからデータを復元しますか？\n現在のデータは上書きされます。')) return;
+            
+            try {
+                const backupData = localStorage.getItem('vehicle_backup');
+                if (!backupData) {
+                    alert('バックアップが見つかりません');
+                    return;
+                }
+                
+                const backup = JSON.parse(backupData);
+                
+                // Restore all data
+                backup.vehicles.forEach(v => storage.set(`vehicle:${v.id}`, JSON.stringify(v)));
+                backup.repairs.forEach(r => storage.set(`repair:${r.id}`, JSON.stringify(r)));
+                backup.fuelRecords.forEach(f => storage.set(`fuel:${f.id}`, JSON.stringify(f)));
+                backup.accidents.forEach(a => storage.set(`accident:${a.id}`, JSON.stringify(a)));
+                
+                alert('✅ バックアップから復元しました！\nバックアップ日時: ' + new Date(backup.timestamp).toLocaleString('ja-JP'));
+                location.reload();
+            } catch (error) {
+                console.error('❌ 復元エラー:', error);
+                alert('復元に失敗しました: ' + error.message);
+            }
+        }
+
+        function exportAllDataCSV() {
+            try {
+                // Build CSV content
+                let csvContent = "";
+                
+                // Vehicles
+                csvContent += "=== 車両情報 ===\n";
+                csvContent += "車両番号,車両名,年式,走行距離,購入金額,購入日,車検日,保険更新日\n";
+                state.vehicles.forEach(v => {
+                    csvContent += `${v.number || ''},${v.name || ''},${v.year || ''},${v.mileage || 0},${v.purchasePrice || 0},${v.purchaseDate || ''},${v.inspectionDate || ''},${v.insuranceDate || ''}\n`;
+                });
+                
+                csvContent += "\n=== 修繕記録 ===\n";
+                csvContent += "車両番号,日付,作業内容,費用,工場名,備考\n";
+                state.repairs.forEach(r => {
+                    const vehicle = state.vehicles.find(v => v.id === r.vehicleId);
+                    csvContent += `${vehicle?.number || ''},${r.date || ''},${r.type || ''},${r.cost || 0},${r.garage || ''},"${(r.notes || '').replace(/"/g, '""')}"\n`;
+                });
+                
+                csvContent += "\n=== 燃料記録 ===\n";
+                csvContent += "車両番号,日付,給油量,費用,走行距離,燃費\n";
+                state.fuelRecords.forEach(f => {
+                    const vehicle = state.vehicles.find(v => v.id === f.vehicleId);
+                    csvContent += `${vehicle?.number || ''},${f.date || ''},${f.liters || 0},${f.cost || 0},${f.mileage || 0},${f.fuelEfficiency || 0}\n`;
+                });
+                
+                // Add UTF-8 BOM to prevent garbled text
+                const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `車両管理データ_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                alert('✅ CSVファイルをダウンロードしました！');
+            } catch (error) {
+                console.error('❌ エクスポートエラー:', error);
+                alert('エクスポートに失敗しました: ' + error.message);
+            }
+        }
+
+        function importVehiclesCSV() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const csv = event.target.result;
+                        const lines = csv.split('\n');
+                        
+                        let importCount = 0;
+                        let inVehicleSection = false;
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            
+                            if (line === '=== 車両情報 ===') {
+                                inVehicleSection = true;
+                                i++; // Skip header line
+                                continue;
+                            }
+                            
+                            if (line.startsWith('===') && inVehicleSection) {
+                                break; // End of vehicle section
+                            }
+                            
+                            if (inVehicleSection && line) {
+                                // タブ区切りかカンマ区切りかを自動判定
+                                const delimiter = line.includes('\t') ? '\t' : ',';
+                                const parts = line.split(delimiter).map(p => p.trim());
+                                
+                                if (parts.length >= 8) {
+                                    const vehicleData = {
+                                        id: `v${Date.now()}_${importCount}`,
+                                        number: parts[0],
+                                        name: parts[1],
+                                        year: parseInt(parts[2]) || 0,
+                                        mileage: parseInt(parts[3]) || 0,
+                                        purchasePrice: parseInt(parts[4]) || 0,
+                                        purchaseDate: parts[5],
+                                        inspectionDate: parts[6],
+                                        insuranceDate: parts[7],
+                                        image: null,
+                                        editedBy: state.currentUser,
+                                        editedAt: new Date().toISOString()
+                                    };
+                                    
+                                    storage.set(`vehicle:${vehicleData.id}`, JSON.stringify(vehicleData));
+                                    importCount++;
+                                }
+                            }
+                        }
+                        
+                        alert(`✅ ${importCount}台の車両をインポートしました！`);
+                        await loadData();
+                        render();
+                    } catch (error) {
+                        console.error('❌ インポートエラー:', error);
+                        alert('インポートに失敗しました: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function importFuelCSV() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const csv = event.target.result;
+                        console.log('📄 CSVファイル全体:', csv);
+                        const lines = csv.split('\n');
+                        console.log('📝 全行数:', lines.length);
+                        
+                        let importCount = 0;
+                        let inFuelSection = false;
+                        let skippedCount = 0;
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            
+                            if (line.includes('燃料記録')) {
+                                console.log('✅ 燃料記録セクション発見:', i, line);
+                                inFuelSection = true;
+                                i++; // Skip header line
+                                continue;
+                            }
+                            
+                            if (line.startsWith('===') && inFuelSection) {
+                                console.log('🛑 セクション終了:', line);
+                                break;
+                            }
+                            
+                            if (inFuelSection && line) {
+                                console.log(`📊 行 ${i}:`, line);
+                                
+                                // タブ区切りかカンマ区切りかを自動判定
+                                const delimiter = line.includes('\t') ? '\t' : ',';
+                                const parts = line.split(delimiter);
+                                console.log(`  分割結果 (${parts.length}項目、区切り: ${delimiter === '\t' ? 'タブ' : 'カンマ'}):`, parts);
+                                
+                                if (parts.length >= 6) {
+                                    const vehicleNumber = parts[0].trim();
+                                    console.log('  🚗 車両番号を検索:', vehicleNumber);
+                                    
+                                    const vehicle = state.vehicles.find(v => {
+                                        console.log(`    比較: "${v.number}" === "${vehicleNumber}" → ${v.number === vehicleNumber}`);
+                                        return v.number === vehicleNumber;
+                                    });
+                                    
+                                    if (vehicle) {
+                                        const dateParts = parts[1].trim().split('/');
+                                        const formattedDate = dateParts.length === 3 
+                                            ? `${dateParts[0]}-${dateParts[1].padStart(2, '0')}-${dateParts[2].padStart(2, '0')}`
+                                            : parts[1].trim();
+                                        
+                                        const fuelData = {
+                                            id: `f${Date.now()}_${importCount}`,
+                                            vehicleId: vehicle.id,
+                                            date: formattedDate,
+                                            liters: parseFloat(parts[2].trim()) || 0,
+                                            cost: parseInt(parts[3].trim()) || 0,
+                                            mileage: parseInt(parts[4].trim()) || 0,
+                                            fuelEfficiency: parseFloat(parts[5].trim()) || 0
+                                        };
+                                        
+                                        console.log('  ✅ インポート:', fuelData);
+                                        storage.set(`fuel:${fuelData.id}`, JSON.stringify(fuelData));
+                                        importCount++;
+                                    } else {
+                                        console.log('  ❌ 車両が見つかりません:', vehicleNumber);
+                                        console.log('  登録されている車両:', state.vehicles.map(v => v.number));
+                                        skippedCount++;
+                                    }
+                                } else {
+                                    console.log('  ⚠️ データ不足 (6項目必要)');
+                                }
+                            }
+                        }
+                        
+                        let message = `✅ ${importCount}件の燃料記録をインポートしました！`;
+                        if (skippedCount > 0) {
+                            message += `\n⚠️ ${skippedCount}件はスキップされました（車両が見つからない）`;
+                        }
+                        alert(message);
+                        await loadData();
+                        render();
+                    } catch (error) {
+                        console.error('❌ インポートエラー:', error);
+                        alert('インポートに失敗しました: ' + error.message);
+                    }
+                };
+                reader.readAsText(file, 'UTF-8');
+            };
+            input.click();
+        }
+
+        function importRepairsCSV() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const csv = event.target.result;
+                        const lines = csv.split('\n');
+                        
+                        let importCount = 0;
+                        let inRepairSection = false;
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            
+                            if (line === '=== 修繕記録 ===') {
+                                inRepairSection = true;
+                                i++; // Skip header line
+                                continue;
+                            }
+                            
+                            if (line.startsWith('===') && inRepairSection) {
+                                break; // End of repair section
+                            }
+                            
+                            if (inRepairSection && line) {
+                                // タブ区切りかカンマ区切りかを自動判定
+                                const delimiter = line.includes('\t') ? '\t' : ',';
+                                const parts = line.split(delimiter).map(p => p.trim().replace(/^"|"$/g, ''));
+                                
+                                if (parts.length >= 5) {
+                                    // 車両番号から車両IDを取得
+                                    const vehicleNumber = parts[0];
+                                    const vehicle = state.vehicles.find(v => v.number === vehicleNumber);
+                                    
+                                    if (vehicle) {
+                                        const repairData = {
+                                            id: `r${Date.now()}_${importCount}`,
+                                            vehicleId: vehicle.id,
+                                            date: parts[1],
+                                            type: parts[2],
+                                            cost: parseInt(parts[3]) || 0,
+                                            garage: parts[4],
+                                            notes: parts[5] || ''
+                                        };
+                                        
+                                        storage.set(`repair:${repairData.id}`, JSON.stringify(repairData));
+                                        importCount++;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        alert(`✅ ${importCount}件の修繕記録をインポートしました！`);
+                        await loadData();
+                        render();
+                    } catch (error) {
+                        console.error('❌ インポートエラー:', error);
+                        alert('インポートに失敗しました: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function showImportMenu() {
+            const menu = `
+インポートするデータを選択してください:
+
+1️⃣ 車両情報
+2️⃣ 燃料記録
+3️⃣ 修繕記録
+
+番号を入力してください (1/2/3):`;
+            
+            const choice = prompt(menu);
+            
+            if (choice === '1') {
+                importVehiclesCSV();
+            } else if (choice === '2') {
+                importFuelCSV();
+            } else if (choice === '3') {
+                importRepairsCSV();
+            } else if (choice !== null) {
+                alert('❌ 無効な選択です。1、2、または3を入力してください。');
+            }
+        }
+
+        // Initialize
+        async function init() {
+            try {
+                console.log('🚀 システム初期化開始');
+                await loadData();
+                render();
+                setTimeout(drawCharts, 100);
+                console.log('✅ システム初期化完了');
+            } catch (error) {
+                console.error('❌ 初期化エラー:', error);
+                alert('システムの初期化に失敗しました。ページをリロードしてください。');
+            }
+        }
+
+        // Chart drawing functions
+        let charts = {};
+
+        function drawCharts() {
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            charts = {};
+
+            drawMonthlyChart();
+            drawFuelEfficiencyChart();
+            drawVehicleCostChart();
+        }
+
+        function drawMonthlyChart() {
+            const canvas = document.getElementById('monthlyChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            
+            // Get data for the last 6 months
+            const monthsData = getMonthlyData(6);
+
+            charts.monthly = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: monthsData.labels,
+                    datasets: [
+                        {
+                            label: '修繕費',
+                            data: monthsData.repairs,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: '燃料費',
+                            data: monthsData.fuel,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ¥' + context.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function drawFuelEfficiencyChart() {
+            const canvas = document.getElementById('fuelEfficiencyChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            
+            // Get fuel efficiency data
+            const fuelData = getFuelEfficiencyData();
+
+            charts.fuelEfficiency = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: fuelData.labels,
+                    datasets: fuelData.datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' km/L';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(1) + ' km/L';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function drawVehicleCostChart() {
+            const canvas = document.getElementById('vehicleCostChart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            
+            // Get vehicle cost data
+            const vehicleCosts = getVehicleCostData();
+
+            charts.vehicleCost = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: vehicleCosts.labels,
+                    datasets: [
+                        {
+                            label: '購入価格',
+                            data: vehicleCosts.purchase,
+                            backgroundColor: '#3b82f6'
+                        },
+                        {
+                            label: '修繕費',
+                            data: vehicleCosts.repairs,
+                            backgroundColor: '#f59e0b'
+                        },
+                        {
+                            label: '燃料費',
+                            data: vehicleCosts.fuel,
+                            backgroundColor: '#10b981'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ¥' + context.parsed.y.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + (value / 1000).toFixed(0) + 'K';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getMonthlyData(months) {
+            const labels = [];
+            const repairs = [];
+            const fuel = [];
+            const today = new Date();
+
+            for (let i = months - 1; i >= 0; i--) {
+                const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const monthStr = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+                labels.push(monthStr);
+
+                // Calculate repair costs for this month
+                const monthRepairs = state.repairs.filter(r => {
+                    const repairDate = new Date(r.date);
+                    return repairDate.getFullYear() === date.getFullYear() && 
+                           repairDate.getMonth() === date.getMonth();
+                });
+                repairs.push(monthRepairs.reduce((sum, r) => sum + r.cost, 0));
+
+                // Calculate fuel costs for this month
+                const monthFuel = state.fuelRecords.filter(f => {
+                    const fuelDate = new Date(f.date);
+                    return fuelDate.getFullYear() === date.getFullYear() && 
+                           fuelDate.getMonth() === date.getMonth();
+                });
+                fuel.push(monthFuel.reduce((sum, f) => sum + f.cost, 0));
+            }
+
+            return { labels, repairs, fuel };
+        }
+
+        function getFuelEfficiencyData() {
+            const datasets = [];
+            const colors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'];
+
+            state.vehicles.forEach((vehicle, index) => {
+                const vehicleFuel = state.fuelRecords
+                    .filter(f => f.vehicleId === vehicle.id)
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                if (vehicleFuel.length > 0) {
+                    datasets.push({
+                        label: vehicle.number,
+                        data: vehicleFuel.map(f => f.fuelEfficiency),
+                        borderColor: colors[index % colors.length],
+                        backgroundColor: colors[index % colors.length] + '20',
+                        tension: 0.4
+                    });
+                }
+            });
+
+            // Use dates from all fuel records
+            const allDates = state.fuelRecords
+                .map(f => f.date)
+                .filter((v, i, a) => a.indexOf(v) === i)
+                .sort();
+
+            return {
+                labels: allDates.map(d => new Date(d).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })),
+                datasets
+            };
+        }
+
+        function getVehicleCostData() {
+            const labels = [];
+            const purchase = [];
+            const repairs = [];
+            const fuel = [];
+
+            state.vehicles.forEach(vehicle => {
+                labels.push(vehicle.number);
+                purchase.push(vehicle.purchasePrice || 0);
+
+                const vehicleRepairs = state.repairs.filter(r => r.vehicleId === vehicle.id);
+                repairs.push(vehicleRepairs.reduce((sum, r) => sum + r.cost, 0));
+
+                const vehicleFuel = state.fuelRecords.filter(f => f.vehicleId === vehicle.id);
+                fuel.push(vehicleFuel.reduce((sum, f) => sum + f.cost, 0));
+            });
+
+            return { labels, purchase, repairs, fuel };
+        }
+
+        async function loadData() {
+            try {
+                // Load vehicles
+                const vehicleKeys = storage.list('vehicle:');
+                const loadedVehicles = [];
+                
+                if (vehicleKeys && vehicleKeys.keys) {
+                    for (const key of vehicleKeys.keys) {
+                        try {
+                            const result = storage.get(key);
+                            if (result) {
+                                loadedVehicles.push(JSON.parse(result.value));
+                            }
+                        } catch (err) {
+                            console.log('Vehicle key not found:', key);
+                        }
+                    }
+                }
+
+                if (loadedVehicles.length === 0) {
+                    await initializeSampleData();
+                    await loadData();
+                    return;
+                }
+
+                state.vehicles = loadedVehicles;
+
+                // Load repairs
+                const repairKeys = storage.list('repair:');
+                const loadedRepairs = [];
+                if (repairKeys && repairKeys.keys) {
+                    for (const key of repairKeys.keys) {
+                        try {
+                            const result = storage.get(key);
+                            if (result) {
+                                const parsed = JSON.parse(result.value);
+                                loadedRepairs.push(parsed);
+                            }
+                        } catch (err) {
+                            console.error('⚠️ 修繕データ読み込みエラー:', key, err);
+                        }
+                    }
+                }
+                console.log('🔧 読み込んだ修繕記録:', loadedRepairs.length, '件');
+                state.repairs = loadedRepairs;
+
+                // Load fuel records
+                const fuelKeys = storage.list('fuel:');
+                const loadedFuel = [];
+                if (fuelKeys && fuelKeys.keys) {
+                    for (const key of fuelKeys.keys) {
+                        try {
+                            const result = storage.get(key);
+                            if (result) {
+                                const parsed = JSON.parse(result.value);
+                                loadedFuel.push(parsed);
+                            }
+                        } catch (err) {
+                            console.error('⚠️ 燃料データ読み込みエラー:', key, err);
+                        }
+                    }
+                }
+                console.log('⛽ 読み込んだ燃料記録:', loadedFuel.length, '件');
+                state.fuelRecords = loadedFuel;
+
+                // Load accidents
+                const accidentKeys = storage.list('accident:');
+                const loadedAccidents = [];
+                if (accidentKeys && accidentKeys.keys) {
+                    for (const key of accidentKeys.keys) {
+                        try {
+                            const result = storage.get(key);
+                            if (result) loadedAccidents.push(JSON.parse(result.value));
+                        } catch (err) {}
+                    }
+                }
+                state.accidents = loadedAccidents;
+
+                // Load documents
+                const docKeys = storage.list('document:');
+                const loadedDocs = [];
+                if (docKeys && docKeys.keys) {
+                    for (const key of docKeys.keys) {
+                        try {
+                            const result = storage.get(key);
+                            if (result) loadedDocs.push(JSON.parse(result.value));
+                        } catch (err) {}
+                    }
+                }
+                state.documents = loadedDocs;
+
+                state.isLoading = false;
+            } catch (error) {
+                console.error('Error loading data:', error);
+                state.isLoading = false;
+            }
+        }
+
+        async function initializeSampleData() {
+            const sampleVehicles = [
+                {
+                    id: 'v1',
+                    number: 'あ123-45',
+                    name: 'トヨタ ハイエース',
+                    year: 2021,
+                    purchasePrice: 3500000,
+                    purchaseDate: '2021-04-15',
+                    inspectionDate: '2025-04-15',
+                    insuranceDate: '2025-05-20',
+                    mileage: 45000,
+                    image: null,
+                    editedBy: 'システム管理者',
+                    editedAt: new Date().toISOString()
+                },
+                {
+                    id: 'v2',
+                    number: 'あ234-56',
+                    name: 'ニッサン NV350キャラバン',
+                    year: 2020,
+                    purchasePrice: 3200000,
+                    purchaseDate: '2020-06-10',
+                    inspectionDate: '2025-06-10',
+                    insuranceDate: '2025-07-15',
+                    mileage: 62000,
+                    image: null,
+                    editedBy: 'システム管理者',
+                    editedAt: new Date().toISOString()
+                }
+            ];
+
+            const sampleRepairs = [
+                {
+                    id: 'r1',
+                    vehicleId: 'v1',
+                    date: '2025-01-10',
+                    type: '12ヶ月点検',
+                    cost: 12000,
+                    mileage: 45000,
+                    garage: 'トヨタディーラー札幌',
+                    notes: '法定12ヶ月点検'
+                },
+                {
+                    id: 'r2',
+                    vehicleId: 'v1',
+                    date: '2024-11-15',
+                    type: 'オイル交換',
+                    cost: 8500,
+                    mileage: 44000,
+                    garage: 'トヨタディーラー札幌',
+                    notes: '定期メンテナンス'
+                },
+                {
+                    id: 'r3',
+                    vehicleId: 'v1',
+                    date: '2024-09-05',
+                    type: 'タイヤ交換',
+                    cost: 45000,
+                    mileage: 42000,
+                    garage: 'タイヤショップABC',
+                    notes: '4本交換（冬タイヤ）'
+                },
+                {
+                    id: 'r4',
+                    vehicleId: 'v2',
+                    date: '2025-01-05',
+                    type: 'バッテリー交換',
+                    cost: 18000,
+                    mileage: 62000,
+                    garage: 'ニッサンディーラー',
+                    notes: 'バッテリー寿命のため交換'
+                },
+                {
+                    id: 'r5',
+                    vehicleId: 'v2',
+                    date: '2024-12-10',
+                    type: 'オイル交換',
+                    cost: 7800,
+                    mileage: 61500,
+                    garage: 'ニッサンディーラー',
+                    notes: '定期メンテナンス'
+                },
+                {
+                    id: 'r6',
+                    vehicleId: 'v2',
+                    date: '2024-10-20',
+                    type: 'ブレーキパッド交換',
+                    cost: 32000,
+                    mileage: 60000,
+                    garage: 'オートバックス',
+                    notes: '前後ブレーキパッド交換'
+                }
+            ];
+
+            const sampleFuel = [
+                {
+                    id: 'f1',
+                    vehicleId: 'v1',
+                    date: '2025-01-15',
+                    liters: 50,
+                    cost: 8500,
+                    mileage: 45000,
+                    fuelEfficiency: 10.5
+                },
+                {
+                    id: 'f2',
+                    vehicleId: 'v1',
+                    date: '2024-12-20',
+                    liters: 48,
+                    cost: 8200,
+                    mileage: 44500,
+                    fuelEfficiency: 10.2
+                },
+                {
+                    id: 'f3',
+                    vehicleId: 'v1',
+                    date: '2024-11-25',
+                    liters: 52,
+                    cost: 8800,
+                    mileage: 43900,
+                    fuelEfficiency: 9.8
+                },
+                {
+                    id: 'f4',
+                    vehicleId: 'v2',
+                    date: '2025-01-10',
+                    liters: 55,
+                    cost: 9300,
+                    mileage: 62000,
+                    fuelEfficiency: 9.5
+                },
+                {
+                    id: 'f5',
+                    vehicleId: 'v2',
+                    date: '2024-12-15',
+                    liters: 53,
+                    cost: 9000,
+                    mileage: 61500,
+                    fuelEfficiency: 9.3
+                },
+                {
+                    id: 'f6',
+                    vehicleId: 'v2',
+                    date: '2024-11-18',
+                    liters: 54,
+                    cost: 9100,
+                    mileage: 61000,
+                    fuelEfficiency: 9.0
+                }
+            ];
+
+            for (const vehicle of sampleVehicles) {
+                storage.set(`vehicle:${vehicle.id}`, JSON.stringify(vehicle));
+            }
+
+            for (const repair of sampleRepairs) {
+                storage.set(`repair:${repair.id}`, JSON.stringify(repair));
+            }
+
+            for (const fuel of sampleFuel) {
+                storage.set(`fuel:${fuel.id}`, JSON.stringify(fuel));
+            }
+        }
+
+        // Actions
+        async function saveVehicle(vehicleData) {
+            try {
+                console.log('🚗 車両保存開始:', vehicleData);
+                
+                const newVehicle = {
+                    ...vehicleData,
+                    id: vehicleData.id || `v${Date.now()}`,
+                    editedBy: state.currentUser,
+                    editedAt: new Date().toISOString()
+                };
+                
+                console.log('💾 保存データ:', newVehicle);
+                storage.set(`vehicle:${newVehicle.id}`, JSON.stringify(newVehicle));
+                console.log('✅ 車両保存成功');
+                
+                // 自動バックアップ
+                createAutoBackup();
+                
+                await loadData();
+                state.showAddVehicle = false;
+                uploadedImage = null;
+                render();
+            } catch (error) {
+                console.error('❌ 車両保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+            }
+        }
+
+        async function deleteVehicle(vehicleId) {
+            if (!confirm('この車両を削除してもよろしいですか？')) return;
+            
+            storage.delete(`vehicle:${vehicleId}`);
+            
+            // Delete related data
+            state.repairs.filter(r => r.vehicleId === vehicleId).forEach(r => storage.delete(`repair:${r.id}`));
+            state.fuelRecords.filter(f => f.vehicleId === vehicleId).forEach(f => storage.delete(`fuel:${f.id}`));
+            state.accidents.filter(a => a.vehicleId === vehicleId).forEach(a => storage.delete(`accident:${a.id}`));
+            state.documents.filter(d => d.vehicleId === vehicleId).forEach(d => storage.delete(`document:${d.id}`));
+            
+            await loadData();
+            state.selectedVehicle = null;
+            state.activeView = 'dashboard';
+            render();
+        }
+
+        async function saveRepair(repairData) {
+            try {
+                console.log('🔧 修繕記録保存開始:', repairData);
+                
+                if (!state.selectedVehicle) {
+                    alert('車両が選択されていません');
+                    return;
+                }
+                
+                const newRepair = {
+                    ...repairData,
+                    id: repairData.id || `r${Date.now()}`,
+                    vehicleId: state.selectedVehicle.id
+                };
+                
+                console.log('💾 保存データ:', newRepair);
+                storage.set(`repair:${newRepair.id}`, JSON.stringify(newRepair));
+                console.log('✅ 修繕記録保存成功');
+                
+                await loadData();
+                state.showAddRepair = false;
+                state.editingRepair = null;
+                render();
+            } catch (error) {
+                console.error('❌ 修繕記録保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+            }
+        }
+
+        async function deleteRepair(repairId) {
+            if (!confirm('この修繕記録を削除してもよろしいですか？')) return;
+            storage.delete(`repair:${repairId}`);
+            await loadData();
+            render();
+        }
+
+        async function saveFuel(fuelData) {
+            try {
+                console.log('⛽ 燃料記録保存開始:', fuelData);
+                
+                if (!state.selectedVehicle) {
+                    alert('車両が選択されていません');
+                    return;
+                }
+                
+                const newFuel = {
+                    ...fuelData,
+                    id: fuelData.id || `f${Date.now()}`,
+                    vehicleId: state.selectedVehicle.id
+                };
+                
+                console.log('💾 保存データ:', newFuel);
+                storage.set(`fuel:${newFuel.id}`, JSON.stringify(newFuel));
+                console.log('✅ 燃料記録保存成功');
+                
+                await loadData();
+                state.showAddFuel = false;
+                state.editingFuel = null;
+                render();
+            } catch (error) {
+                console.error('❌ 燃料記録保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+            }
+        }
+
+        async function deleteFuel(fuelId) {
+            if (!confirm('この燃料記録を削除してもよろしいですか？')) return;
+            storage.delete(`fuel:${fuelId}`);
+            await loadData();
+            render();
+        }
+
+        async function saveAccident(accidentData) {
+            console.log('🚨 保存開始:', accidentData);
+            console.log('📍 選択中の車両:', state.selectedVehicle);
+            
+            if (!state.selectedVehicle) {
+                alert('車両が選択されていません');
+                return;
+            }
+            
+            const newAccident = {
+                ...accidentData,
+                id: accidentData.id || `a${Date.now()}`,
+                vehicleId: state.selectedVehicle.id
+            };
+            
+            console.log('💾 保存するデータ:', newAccident);
+            
+            try {
+                storage.set(`accident:${newAccident.id}`, JSON.stringify(newAccident));
+                console.log('✅ 保存成功！');
+                
+                await loadData();
+                state.showAddAccident = false;
+                render();
+            } catch (error) {
+                console.error('❌ 保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+            }
+        }
+
+        async function deleteAccident(accidentId) {
+            if (!confirm('この事故記録を削除してもよろしいですか？')) return;
+            storage.delete(`accident:${accidentId}`);
+            await loadData();
+            render();
+        }
+
+        async function saveDocument(documentData) {
+            const newDocument = {
+                ...documentData,
+                id: documentData.id || `d${Date.now()}`,
+                vehicleId: state.selectedVehicle.id,
+                uploadedAt: new Date().toISOString()
+            };
+            
+            storage.set(`document:${newDocument.id}`, JSON.stringify(newDocument));
+            await loadData();
+            state.showAddDocument = false;
+            render();
+        }
+
+        // Render
+        function render() {
+            try {
+                const app = document.getElementById('app');
+                
+                if (!app) {
+                    console.error('❌ アプリ要素が見つかりません');
+                    return;
+                }
+                
+                if (state.isLoading) {
+                    app.innerHTML = '<div class="loading">読み込み中...</div>';
+                    return;
+                }
+
+                app.innerHTML = `
+                    ${renderHeader()}
+                    <div class="container">
+                        ${state.activeView === 'dashboard' ? renderDashboard() : renderDetail()}
+                    </div>
+                    ${state.showAddVehicle ? renderVehicleForm() : ''}
+                    ${state.showAddRepair ? renderRepairForm() : ''}
+                    ${state.showAddFuel ? renderFuelForm() : ''}
+                    ${state.showAddAccident ? renderAccidentForm() : ''}
+                    ${state.showAddDocument ? renderDocumentForm() : ''}
+                    ${state.showEmergencyModal ? renderEmergencyModal() : ''}
+                `;
+
+                // Redraw charts after rendering dashboard
+                if (state.activeView === 'dashboard') {
+                    setTimeout(drawCharts, 100);
+                }
+            } catch (error) {
+                console.error('❌ レンダリングエラー:', error);
+                const app = document.getElementById('app');
+                if (app) {
+                    app.innerHTML = `
+                        <div style="padding: 40px; text-align: center;">
+                            <h2 style="color: #dc2626;">⚠️ エラーが発生しました</h2>
+                            <p style="color: #64748b; margin: 20px 0;">${error.message}</p>
+                            <button class="btn-primary" onclick="location.reload()" style="margin: 0 auto;">
+                                ページを再読み込み
+                            </button>
+                            <br><br>
+                            <button class="btn-secondary" onclick="localStorage.clear(); location.reload()" style="margin: 0 auto;">
+                                データをリセットして再読み込み
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function renderHeader() {
+            return `
+                <header>
+                    <div class="header-content">
+                        <div class="header-left">
+                            <div class="logo">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                                    <circle cx="7" cy="17" r="2" />
+                                    <path d="M9 17h6" />
+                                    <circle cx="17" cy="17" r="2" />
+                                </svg>
+                            </div>
+                            <div class="header-title">
+                                <h1>車両管理システム Pro</h1>
+                                <p class="mono">Professional Vehicle Management</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <button class="btn-emergency" onclick="openEmergencyModal()" title="緊急時対応">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                                    <path d="M12 9v4" />
+                                    <path d="M12 17h.01" />
+                                </svg>
+                                <span>緊急時対応</span>
+                            </button>
+                            <div class="btn-group">
+                                <button class="btn-secondary" onclick="exportAllDataCSV()" title="CSVエクスポート">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="7 10 12 15 17 10" />
+                                        <line x1="12" x2="12" y1="15" y2="3" />
+                                    </svg>
+                                </button>
+                                <button class="btn-secondary" onclick="showImportMenu()" title="CSVインポート">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="17 8 12 3 7 8" />
+                                        <line x1="12" x2="12" y1="3" y2="15" />
+                                    </svg>
+                                </button>
+                                <button class="btn-secondary" onclick="restoreBackup()" title="バックアップ復元">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                                        <path d="M21 3v5h-5" />
+                                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                                        <path d="M3 21v-5h5" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <button class="btn-secondary" onclick="showNotificationSettings()" title="通知設定">
+                                <svg width="18" height="18" viewBox="0 0 24 24">
+                                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                                </svg>
+                            </button>
+                            <button class="btn-primary" onclick="openAddVehicle()">
+                                <svg width="18" height="18" viewBox="0 0 24 24">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5v14" />
+                                </svg>
+                                <span>車両を追加</span>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+            `;
+        }
+
+        function renderDashboard() {
+            const alerts = checkAlerts();
+            const totalCost = calculateTotalCosts();
+            const filteredVehicles = getFilteredVehicles();
+
+            return `
+                ${alerts.length > 0 ? renderAlerts(alerts) : ''}
+                ${renderStats(totalCost)}
+                
+                <div class="vehicles-header">
+                    <h2>車両一覧 (${filteredVehicles.length}台)</h2>
+                </div>
+                <div class="vehicles-grid">
+                    ${filteredVehicles.map(vehicle => renderVehicleCard(vehicle)).join('')}
+                </div>
+                
+                ${renderCharts()}
+            `;
+        }
+
+        function checkAlerts() {
+            const today = new Date();
+            const oneMonth = 30 * 24 * 60 * 60 * 1000;
+            const alerts = [];
+
+            state.vehicles.forEach(vehicle => {
+                const inspectionDate = new Date(vehicle.inspectionDate);
+                const inspectionDiff = inspectionDate - today;
+
+                if (inspectionDiff < oneMonth && inspectionDiff > 0) {
+                    const daysLeft = Math.ceil(inspectionDiff / (24 * 60 * 60 * 1000));
+                    alerts.push({
+                        vehicle: vehicle.name,
+                        number: vehicle.number,
+                        type: 'inspection',
+                        daysLeft,
+                        critical: daysLeft <= 14
+                    });
+                }
+            });
+
+            return alerts;
+        }
+
+        function renderAlerts(alerts) {
+            return alerts.map(alert => `
+                <div class="alert-banner ${alert.critical ? 'critical' : ''}">
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                        <path d="M12 9v4" />
+                        <path d="M12 17h.01" />
+                    </svg>
+                    <div style="flex: 1;">
+                        <strong>${alert.vehicle} (${alert.number})</strong>
+                        <p style="font-size: 14px; margin-top: 4px;">車検満了まであと${alert.daysLeft}日です</p>
+                    </div>
+                    <span style="font-weight: 700; color: ${alert.critical ? '#dc2626' : '#d97706'};">
+                        ${alert.critical ? '緊急' : '注意'}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function calculateTotalCosts() {
+            const totalRepairs = state.repairs.reduce((sum, r) => sum + (r.cost || 0), 0);
+            const totalFuel = state.fuelRecords.reduce((sum, f) => sum + (f.cost || 0), 0);
+            const totalPurchase = state.vehicles.reduce((sum, v) => sum + (v.purchasePrice || 0), 0);
+            
+            // Calculate average fuel efficiency
+            const avgFuelEfficiency = state.fuelRecords.length > 0 
+                ? state.fuelRecords.reduce((sum, f) => sum + (f.fuelEfficiency || 0), 0) / state.fuelRecords.length 
+                : 0;
+            
+            // Calculate this fiscal year's costs (April to March)
+            const today = new Date();
+            const currentMonth = today.getMonth(); // 0-11
+            const currentYear = today.getFullYear();
+            
+            // 年度の開始年を計算（4月以降なら今年、3月以前なら前年）
+            const fiscalYearStart = currentMonth >= 3 ? currentYear : currentYear - 1;
+            const fiscalStartDate = new Date(fiscalYearStart, 3, 1); // 4月1日
+            const fiscalEndDate = new Date(fiscalYearStart + 1, 2, 31, 23, 59, 59); // 翌年3月31日
+            
+            const thisFiscalYearRepairs = state.repairs.filter(r => {
+                const date = new Date(r.date);
+                return date >= fiscalStartDate && date <= fiscalEndDate;
+            }).reduce((sum, r) => sum + (r.cost || 0), 0);
+            
+            const thisFiscalYearFuel = state.fuelRecords.filter(f => {
+                const date = new Date(f.date);
+                return date >= fiscalStartDate && date <= fiscalEndDate;
+            }).reduce((sum, f) => sum + (f.cost || 0), 0);
+            
+            return {
+                repairs: totalRepairs || 0,
+                fuel: totalFuel || 0,
+                purchase: totalPurchase || 0,
+                total: (totalRepairs || 0) + (totalFuel || 0) + (totalPurchase || 0),
+                avgFuelEfficiency: avgFuelEfficiency || 0,
+                thisFiscalYearRepairs: thisFiscalYearRepairs || 0,
+                thisFiscalYearFuel: thisFiscalYearFuel || 0,
+                thisFiscalYearTotal: (thisFiscalYearRepairs || 0) + (thisFiscalYearFuel || 0),
+                fiscalYear: `${fiscalYearStart}年度`
+            };
+        }
+
+        function renderStats(costs) {
+            return `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div>
+                                <p class="stat-label">総車両数</p>
+                                <p class="stat-value">${state.vehicles.length}</p>
+                            </div>
+                            <svg class="icon-blue" width="32" height="32" viewBox="0 0 24 24">
+                                <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                                <circle cx="7" cy="17" r="2" />
+                                <path d="M9 17h6" />
+                                <circle cx="17" cy="17" r="2" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div>
+                                <p class="stat-label">総修繕費</p>
+                                <p class="stat-value">¥${costs.repairs.toLocaleString()}</p>
+                                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">${costs.fiscalYear}: ¥${costs.thisFiscalYearRepairs.toLocaleString()}</p>
+                            </div>
+                            <svg class="icon-amber" width="32" height="32" viewBox="0 0 24 24">
+                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div>
+                                <p class="stat-label">総燃料費</p>
+                                <p class="stat-value">¥${costs.fuel.toLocaleString()}</p>
+                                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">${costs.fiscalYear}: ¥${costs.thisFiscalYearFuel.toLocaleString()}</p>
+                            </div>
+                            <svg class="icon-green" width="32" height="32" viewBox="0 0 24 24">
+                                <line x1="3" x2="15" y1="22" y2="22" />
+                                <line x1="4" x2="14" y1="9" y2="9" />
+                                <path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18" />
+                                <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div>
+                                <p class="stat-label">平均燃費</p>
+                                <p class="stat-value">${costs.avgFuelEfficiency.toFixed(1)}</p>
+                                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">km/L</p>
+                            </div>
+                            <svg class="icon-purple" width="32" height="32" viewBox="0 0 24 24">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div>
+                                <p class="stat-label">事故件数</p>
+                                <p class="stat-value">${state.accidents.length}</p>
+                            </div>
+                            <svg class="icon-red" width="32" height="32" viewBox="0 0 24 24">
+                                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                                <path d="M12 9v4" />
+                                <path d="M12 17h.01" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div>
+                                <p class="stat-label">${costs.fiscalYear}の総コスト</p>
+                                <p class="stat-value">¥${costs.thisFiscalYearTotal.toLocaleString()}</p>
+                                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">修繕 + 燃料</p>
+                            </div>
+                            <svg class="icon-blue" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <text x="4" y="18" font-size="20" font-weight="bold" fill="currentColor">¥</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVehicleCard(vehicle) {
+            const inspectionDate = new Date(vehicle.inspectionDate);
+            const today = new Date();
+            const daysUntilInspection = Math.ceil((inspectionDate - today) / (24 * 60 * 60 * 1000));
+            const isInspectionSoon = daysUntilInspection < 30 && daysUntilInspection > 0;
+
+            const vehicleRepairs = state.repairs.filter(r => r.vehicleId === vehicle.id);
+            const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
+
+            return `
+                <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
+                    <div class="vehicle-image">
+                        ${vehicle.image ? `<img src="${vehicle.image}" alt="${vehicle.name}">` : '<div class="vehicle-image-placeholder">🚗</div>'}
+                        ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
+                    </div>
+                    <div class="vehicle-content">
+                        <div class="vehicle-title">
+                            <h3>${vehicle.name || ''}</h3>
+                            <p class="vehicle-number mono">${vehicle.number || ''}</p>
+                        </div>
+                        <div class="vehicle-info-grid">
+                            <div class="vehicle-info-item">
+                                <label>年式</label>
+                                <div class="value">${vehicle.year || 0}年</div>
+                            </div>
+                            <div class="vehicle-info-item">
+                                <label>走行距離</label>
+                                <div class="value mono">${(vehicle.mileage || 0).toLocaleString()} km</div>
+                            </div>
+                            <div class="vehicle-info-item">
+                                <label>車検満了</label>
+                                <div class="value">${vehicle.inspectionDate || ''}</div>
+                            </div>
+                            <div class="vehicle-info-item">
+                                <label>修繕費合計</label>
+                                <div class="value mono">¥${(totalRepairCost || 0).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="vehicle-footer">
+                            <span>修繕記録: ${vehicleRepairs.length}件</span>
+                            <span class="mono">購入価格: ¥${(vehicle.purchasePrice || 0).toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderToolbar() {
+            const months = [
+                { value: 'all', label: '全期間' },
+                { value: '0', label: '今月' },
+                { value: '1', label: '先月' },
+                { value: '3', label: '過去3ヶ月' },
+                { value: '6', label: '過去6ヶ月' },
+                { value: '12', label: '過去1年' }
+            ];
+
+            return `
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <div class="search-box">
+                            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <input type="text" placeholder="車両名・番号で検索..." value="${state.searchQuery}" oninput="handleSearch(event)">
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">期間:</span>
+                            <select class="filter-select" onchange="handleFilterChange(event)">
+                                ${months.map(m => `<option value="${m.value}" ${state.filterMonth === m.value ? 'selected' : ''}>${m.label}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="btn-export" onclick="exportToCSV()">
+                            <svg width="18" height="18" viewBox="0 0 24 24">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" x2="12" y1="15" y2="3"/>
+                            </svg>
+                            CSVエクスポート
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCharts() {
+            return `
+                <div class="chart-section">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3>📊 月別コスト推移</h3>
+                        </div>
+                        <div class="chart-canvas">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 24px;">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3>📈 燃費推移</h3>
+                            </div>
+                            <div class="chart-canvas">
+                                <canvas id="fuelEfficiencyChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3>🚗 車両別コスト比較</h3>
+                            </div>
+                            <div class="chart-canvas">
+                                <canvas id="vehicleCostChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getFilteredVehicles() {
+            return state.vehicles;
+        }
+
+        function handleSearch(event) {
+            state.searchQuery = event.target.value;
+            render();
+        }
+
+        function handleFilterChange(event) {
+            state.filterMonth = event.target.value;
+            render();
+            setTimeout(drawCharts, 100);
+        }
+
+        function exportToCSV() {
+            const csvData = [];
+            
+            // Headers
+            csvData.push(['車両情報']);
+            csvData.push(['車両番号', '車両名', '年式', '走行距離', '購入価格', '車検満了日', '保険満了日']);
+            
+            // Vehicle data
+            state.vehicles.forEach(v => {
+                csvData.push([
+                    v.number,
+                    v.name,
+                    v.year,
+                    v.mileage,
+                    v.purchasePrice || 0,
+                    v.inspectionDate,
+                    v.insuranceDate
+                ]);
+            });
+
+            csvData.push([]);
+            csvData.push(['修繕記録']);
+            csvData.push(['日付', '車両番号', '作業内容', '費用', '走行距離', '工場名', '備考']);
+            
+            // Repair data
+            state.repairs.forEach(r => {
+                const vehicle = state.vehicles.find(v => v.id === r.vehicleId);
+                csvData.push([
+                    r.date,
+                    vehicle?.number || '',
+                    r.type,
+                    r.cost,
+                    r.mileage,
+                    r.garage,
+                    r.notes || ''
+                ]);
+            });
+
+            csvData.push([]);
+            csvData.push(['燃料記録']);
+            csvData.push(['日付', '車両番号', '給油量(L)', '費用', '走行距離', '燃費(km/L)']);
+            
+            // Fuel data
+            state.fuelRecords.forEach(f => {
+                const vehicle = state.vehicles.find(v => v.id === f.vehicleId);
+                csvData.push([
+                    f.date,
+                    vehicle?.number || '',
+                    f.liters,
+                    f.cost,
+                    f.mileage,
+                    f.fuelEfficiency
+                ]);
+            });
+
+            csvData.push([]);
+            csvData.push(['事故記録']);
+            csvData.push(['日付', '車両番号', '種類', '場所', '修理費', '詳細']);
+            
+            // Accident data
+            state.accidents.forEach(a => {
+                const vehicle = state.vehicles.find(v => v.id === a.vehicleId);
+                csvData.push([
+                    a.date,
+                    vehicle?.number || '',
+                    a.type,
+                    a.location,
+                    a.repairCost,
+                    a.description || ''
+                ]);
+            });
+
+            // Convert to CSV string
+            const csvContent = csvData.map(row => row.join(',')).join('\n');
+            const bom = '\uFEFF'; // UTF-8 BOM for Excel
+            const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `車両管理データ_${new Date().toISOString().split('T')[0]}.csv`);
+            link.click();
+        }
+
+        function renderDetail() {
+            const vehicle = state.selectedVehicle;
+            const vehicleRepairs = state.repairs.filter(r => r.vehicleId === vehicle.id);
+            const vehicleFuel = state.fuelRecords.filter(f => f.vehicleId === vehicle.id);
+            const vehicleAccidents = state.accidents.filter(a => a.vehicleId === vehicle.id);
+            const vehicleDocuments = state.documents.filter(d => d.vehicleId === vehicle.id);
+
+            const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
+            const totalFuelCost = vehicleFuel.reduce((sum, f) => sum + (f.cost || 0), 0);
+            const totalCost = (vehicle.purchasePrice || 0) + totalRepairCost + totalFuelCost;
+
+            return `
+                <div class="detail-view">
+                    <div class="detail-header">
+                        <button class="back-button" onclick="backToDashboard()">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path d="m15 18-6-6 6-6"/>
+                            </svg>
+                            戻る
+                        </button>
+                        <div class="detail-actions">
+                            <button class="btn-secondary" onclick="editVehicle()">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                </svg>
+                                編集
+                            </button>
+                            <button class="btn-danger" onclick="deleteVehicle('${vehicle.id}')">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M3 6h18" />
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                </svg>
+                                削除
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="detail-main-card">
+                        <div class="detail-card-header">
+                            <div class="detail-image">
+                                ${vehicle.image ? `<img src="${vehicle.image}" alt="${vehicle.name}">` : '<div style="font-size: 64px;">🚗</div>'}
+                            </div>
+                            <div class="detail-title-section">
+                                <h2>${vehicle.name}</h2>
+                                <p class="detail-subtitle mono">${vehicle.number}</p>
+                                <div style="font-size: 13px; color: #64748b; margin-top: 8px;">
+                                    最終更新: ${new Date(vehicle.editedAt).toLocaleString('ja-JP')} by ${vehicle.editedBy}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-info-grid">
+                            <div class="detail-info-item">
+                                <label>年式</label>
+                                <div class="value">${vehicle.year || 0}年</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>走行距離</label>
+                                <div class="value mono">${(vehicle.mileage || 0).toLocaleString()} km</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>購入価格</label>
+                                <div class="value mono">¥${(vehicle.purchasePrice || 0).toLocaleString()}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>総維持費</label>
+                                <div class="value mono">¥${(totalCost || 0).toLocaleString()}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>車検満了日</label>
+                                <div class="value" style="font-size: 16px;">${vehicle.inspectionDate || ''}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>保険満了日</label>
+                                <div class="value" style="font-size: 16px;">${vehicle.insuranceDate || ''}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tabs-container">
+                        <div class="tabs-header">
+                            <button class="tab-button ${state.activeTab === 'basic' ? 'active' : ''}" onclick="switchTab('basic')">基本情報</button>
+                            <button class="tab-button ${state.activeTab === 'maintenance' ? 'active' : ''}" onclick="switchTab('maintenance')">メンテナンス記録</button>
+                            <button class="tab-button ${state.activeTab === 'repairs' ? 'active' : ''}" onclick="switchTab('repairs')">修繕費</button>
+                            <button class="tab-button ${state.activeTab === 'fuel' ? 'active' : ''}" onclick="switchTab('fuel')">燃料費</button>
+                            <button class="tab-button ${state.activeTab === 'accidents' ? 'active' : ''}" onclick="switchTab('accidents')">事故歴</button>
+                            <button class="tab-button ${state.activeTab === 'insurance' ? 'active' : ''}" onclick="switchTab('insurance')">保険</button>
+                            <button class="tab-button ${state.activeTab === 'documents' ? 'active' : ''}" onclick="switchTab('documents')">保管書類</button>
+                        </div>
+                        <div class="tab-content">
+                            ${renderTabContent(vehicle, vehicleRepairs, vehicleFuel, vehicleAccidents, vehicleDocuments)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTabContent(vehicle, repairs, fuel, accidents, documents) {
+            if (state.activeTab === 'basic') {
+                const vehicleInspectionCerts = state.inspectionCerts.filter(c => c.vehicleId === vehicle.id);
+                
+                return `
+                    <div class="tab-panel active">
+                        <h3 style="margin-bottom: 20px; font-size: 18px; font-weight: 700;">購入情報</h3>
+                        <div class="detail-info-grid" style="margin-bottom: 32px;">
+                            <div class="detail-info-item">
+                                <label>購入日</label>
+                                <div class="value" style="font-size: 16px;">${vehicle.purchaseDate || '未設定'}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>購入価格</label>
+                                <div class="value mono">¥${(vehicle.purchasePrice || 0).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        
+                        <h3 style="margin-bottom: 20px; font-size: 18px; font-weight: 700;">車両詳細</h3>
+                        <div class="detail-info-grid" style="margin-bottom: 32px;">
+                            <div class="detail-info-item">
+                                <label>車両番号</label>
+                                <div class="value mono" style="font-size: 16px;">${vehicle.number || ''}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>車種名</label>
+                                <div class="value" style="font-size: 16px;">${vehicle.name || ''}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>年式</label>
+                                <div class="value">${vehicle.year || 0}年</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>現在の走行距離</label>
+                                <div class="value mono">${(vehicle.mileage || 0).toLocaleString()} km</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>車検満了日</label>
+                                <div class="value" style="font-size: 16px;">${vehicle.inspectionDate || ''}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <label>保険満了日</label>
+                                <div class="value" style="font-size: 16px;">${vehicle.insuranceDate || ''}</div>
+                            </div>
+                        </div>
+                        
+                        <h3 style="margin-bottom: 20px; font-size: 18px; font-weight: 700;">📄 車検証</h3>
+                        <div class="records-header" style="margin-bottom: 16px;">
+                            <div></div>
+                            <button class="btn-primary btn-small" onclick="openAddInspectionCert()">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5v14" />
+                                </svg>
+                                車検証をアップロード
+                            </button>
+                        </div>
+                        ${vehicleInspectionCerts.length > 0 ? `
+                            <div class="document-grid">
+                                ${vehicleInspectionCerts.map(cert => `
+                                    <div class="document-card">
+                                        <div class="document-icon">
+                                            <svg width="24" height="24" viewBox="0 0 24 24">
+                                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                                <polyline points="14 2 14 8 20 8" />
+                                            </svg>
+                                        </div>
+                                        <div class="document-info">
+                                            <h4>${cert.name}</h4>
+                                            <p style="font-size: 11px; margin-top: 4px;">${new Date(cert.uploadedAt).toLocaleDateString('ja-JP')}</p>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                            <button class="btn-secondary btn-small" onclick="viewFile('${cert.data}', 'pdf', '${cert.name}')" style="flex: 1; font-size: 12px; padding: 6px 10px;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                                    <circle cx="12" cy="12" r="3"/>
+                                                </svg>
+                                                表示
+                                            </button>
+                                            <button class="btn-secondary btn-small" onclick="printFile('${cert.data}')" style="font-size: 12px; padding: 6px 10px;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                                    <polyline points="6 9 6 2 18 2 18 9"/>
+                                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                                    <rect width="12" height="8" x="6" y="14"/>
+                                                </svg>
+                                            </button>
+                                            <button class="delete-btn" onclick="deleteInspectionCert('${cert.id}')" style="padding: 6px;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                                    <path d="M3 6h18" />
+                                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="empty-state"><div class="empty-state-icon">📄</div><p>車検証がアップロードされていません</p></div>'}
+                    </div>
+                `;
+            } else if (state.activeTab === 'maintenance') {
+                const vehicleMaintenancePDFs = state.maintenancePDFs.filter(m => m.vehicleId === vehicle.id);
+                
+                return `
+                    <div class="tab-panel active">
+                        <div class="records-header">
+                            <h3>点検記録 (${vehicleMaintenancePDFs.length}件)</h3>
+                            <button class="btn-primary btn-small" onclick="openAddMaintenancePDF()">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5v14" />
+                                </svg>
+                                点検記録を追加
+                            </button>
+                        </div>
+                        ${vehicleMaintenancePDFs.length > 0 ? `
+                            <div class="document-grid">
+                                ${vehicleMaintenancePDFs.sort((a, b) => new Date(b.date) - new Date(a.date)).map(pdf => `
+                                    <div class="document-card">
+                                        <div class="document-icon">
+                                            <svg width="24" height="24" viewBox="0 0 24 24">
+                                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                                <polyline points="14 2 14 8 20 8" />
+                                            </svg>
+                                        </div>
+                                        <div class="document-info">
+                                            <h4>${pdf.name}</h4>
+                                            <p>${pdf.date}</p>
+                                            <p style="font-size: 11px; margin-top: 4px;">${new Date(pdf.uploadedAt).toLocaleDateString('ja-JP')}</p>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                            <button class="btn-secondary btn-small" onclick="viewFile('${pdf.data}', 'pdf', '${pdf.name}')" style="flex: 1; font-size: 12px; padding: 6px 10px;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                                    <circle cx="12" cy="12" r="3"/>
+                                                </svg>
+                                                表示
+                                            </button>
+                                            <button class="btn-secondary btn-small" onclick="printFile('${pdf.data}')" style="font-size: 12px; padding: 6px 10px;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                                    <polyline points="6 9 6 2 18 2 18 9"/>
+                                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                                    <rect width="12" height="8" x="6" y="14"/>
+                                                </svg>
+                                            </button>
+                                            <button class="delete-btn" onclick="deleteMaintenancePDF('${pdf.id}')" style="padding: 6px;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24">
+                                                    <path d="M3 6h18" />
+                                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="empty-state"><div class="empty-state-icon">📋</div><p>点検記録がありません</p></div>'}
+                    </div>
+                `;
+            } else if (state.activeTab === 'repairs') {
+                return `
+                    <div class="tab-panel active">
+                        <div class="records-header">
+                            <h3>修繕記録 (${repairs.length}件)</h3>
+                            <button class="btn-primary btn-small" onclick="openAddRepair()">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5v14" />
+                                </svg>
+                                追加
+                            </button>
+                        </div>
+                        ${repairs.length > 0 ? repairs.sort((a, b) => new Date(b.date) - new Date(a.date)).map(repair => `
+                            <div class="record-card">
+                                <div class="record-header">
+                                    <div class="record-title">
+                                        <h4>${repair.type}</h4>
+                                        <p class="record-date">${repair.date}</p>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-secondary btn-small" onclick="editRepair('${repair.id}')" style="padding: 6px 10px;">
+                                            <svg width="16" height="16" viewBox="0 0 24 24">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </button>
+                                        <button class="delete-btn" onclick="deleteRepair('${repair.id}')">
+                                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                                <path d="M3 6h18" />
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="record-grid">
+                                    <div class="record-item">
+                                        <label>費用</label>
+                                        <div class="value mono">¥${(repair.cost || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div class="record-item">
+                                        <label>工場名</label>
+                                        <div class="value">${repair.garage}</div>
+                                    </div>
+                                    ${repair.notes ? `
+                                        <div class="record-item" style="grid-column: 1 / -1;">
+                                            <label>備考</label>
+                                            <div class="value">${repair.notes}</div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>修繕記録がありません</p></div>'}
+                    </div>
+                `;
+            } else if (state.activeTab === 'fuel') {
+                return `
+                    <div class="tab-panel active">
+                        <div class="records-header">
+                            <h3>燃料記録 (${fuel.length}件)</h3>
+                            <button class="btn-primary btn-small" onclick="openAddFuel()">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5v14" />
+                                </svg>
+                                追加
+                            </button>
+                        </div>
+                        ${fuel.length > 0 ? fuel.sort((a, b) => new Date(b.date) - new Date(a.date)).map(f => `
+                            <div class="record-card">
+                                <div class="record-header">
+                                    <div class="record-title">
+                                        <h4>給油記録</h4>
+                                        <p class="record-date">${f.date}</p>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-secondary btn-small" onclick="editFuel('${f.id}')" style="padding: 6px 10px;">
+                                            <svg width="16" height="16" viewBox="0 0 24 24">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </button>
+                                        <button class="delete-btn" onclick="deleteFuel('${f.id}')">
+                                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                                <path d="M3 6h18" />
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="record-grid">
+                                    <div class="record-item">
+                                        <label>給油量</label>
+                                        <div class="value mono">${f.liters} L</div>
+                                    </div>
+                                    <div class="record-item">
+                                        <label>費用</label>
+                                        <div class="value mono">¥${(f.cost || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div class="record-item">
+                                        <label>走行距離</label>
+                                        <div class="value mono">${(f.mileage || 0).toLocaleString()} km</div>
+                                    </div>
+                                    <div class="record-item">
+                                        <label>燃費</label>
+                                        <div class="value mono">${f.fuelEfficiency} km/L</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><div class="empty-state-icon">⛽</div><p>燃料記録がありません</p></div>'}
+                    </div>
+                `;
+            } else if (state.activeTab === 'accidents') {
+                return `
+                    <div class="tab-panel active">
+                        <div class="records-header">
+                            <h3>事故記録 (${accidents.length}件)</h3>
+                            <button class="btn-primary btn-small" onclick="openAddAccident()">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5v14" />
+                                </svg>
+                                追加
+                            </button>
+                        </div>
+                        ${accidents.length > 0 ? accidents.sort((a, b) => new Date(b.date) - new Date(a.date)).map(accident => `
+                            <div class="record-card">
+                                <div class="record-header">
+                                    <div class="record-title">
+                                        <h4>${accident.type}</h4>
+                                        <p class="record-date">${accident.date}</p>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn-secondary btn-small" onclick="editAccident('${accident.id}')" style="padding: 6px 10px;">
+                                            <svg width="16" height="16" viewBox="0 0 24 24">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                            </svg>
+                                        </button>
+                                        <button class="delete-btn" onclick="deleteAccident('${accident.id}')">
+                                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                                <path d="M3 6h18" />
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="record-grid">
+                                    <div class="record-item">
+                                        <label>場所</label>
+                                        <div class="value">${accident.location}</div>
+                                    </div>
+                                    <div class="record-item">
+                                        <label>修理費</label>
+                                        <div class="value mono">¥${(accident.repairCost || 0).toLocaleString()}</div>
+                                    </div>
+                                    ${accident.description ? `
+                                        <div class="record-item" style="grid-column: 1 / -1;">
+                                            <label>詳細</label>
+                                            <div class="value" style="white-space: pre-wrap;">${accident.description}</div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>事故記録がありません</p></div>'}
+                    </div>
+                `;
+            } else if (state.activeTab === 'insurance') {
+                const vehicleInsurance = state.insuranceRecords.filter(i => i.vehicleId === vehicle.id);
+                
+                return `
+                    <div class="tab-panel active">
+                        <div class="records-header">
+                            <h3>保険記録 (${vehicleInsurance.length}件)</h3>
+                            <button class="btn-primary btn-small" onclick="openAddInsurance()">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5v14" />
+                                </svg>
+                                追加
+                            </button>
+                        </div>
+                        ${vehicleInsurance.length > 0 ? vehicleInsurance.sort((a, b) => new Date(b.startDate) - new Date(a.startDate)).map(ins => `
+                            <div class="record-card">
+                                <div class="record-header">
+                                    <div class="record-title">
+                                        <h4>${ins.company}</h4>
+                                        <p class="record-date">${ins.startDate} 〜 ${ins.endDate}</p>
+                                    </div>
+                                    <button class="delete-btn" onclick="deleteInsurance('${ins.id}')">
+                                        <svg width="20" height="20" viewBox="0 0 24 24">
+                                            <path d="M3 6h18" />
+                                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="record-grid">
+                                    <div class="record-item">
+                                        <label>証券番号</label>
+                                        <div class="value mono">${ins.policyNumber}</div>
+                                    </div>
+                                    <div class="record-item">
+                                        <label>年間保険料</label>
+                                        <div class="value mono">¥${(ins.annualCost || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div class="record-item">
+                                        <label>契約タイプ</label>
+                                        <div class="value">${ins.type}</div>
+                                    </div>
+                                    ${ins.notes ? `
+                                        <div class="record-item" style="grid-column: 1 / -1;">
+                                            <label>備考</label>
+                                            <div class="value">${ins.notes}</div>
+                                        </div>
+                                    ` : ''}
+                                    ${ins.pdfFile ? `
+                                        <div class="record-item" style="grid-column: 1 / -1;">
+                                            <label>保険証券</label>
+                                            <div style="display: flex; gap: 12px; margin-top: 8px;">
+                                                <button class="btn-secondary btn-small" onclick="viewFile('${ins.pdfFile.data}', 'pdf', '${ins.pdfFile.name}')">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24">
+                                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                                        <polyline points="14 2 14 8 20 8" />
+                                                    </svg>
+                                                    保険証券を表示
+                                                </button>
+                                                <button class="btn-secondary btn-small" onclick="printFile('${ins.pdfFile.data}')">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24">
+                                                        <polyline points="6 9 6 2 18 2 18 9"/>
+                                                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                                        <rect width="12" height="8" x="6" y="14"/>
+                                                    </svg>
+                                                    印刷
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><div class="empty-state-icon">🛡️</div><p>保険記録がありません</p></div>'}
+                    </div>
+                `;
+            } else if (state.activeTab === 'documents') {
+                return `
+                    <div class="tab-panel active">
+                        <div class="records-header">
+                            <h3>保管書類 (${documents.length}件)</h3>
+                            <button class="btn-primary btn-small" onclick="openAddDocument()">
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                    <path d="M5 12h14" />
+                                    <path d="M12 5v14" />
+                                </svg>
+                                追加
+                            </button>
+                        </div>
+                        ${documents.length > 0 ? `
+                            <div class="document-grid">
+                                ${documents.map(doc => `
+                                    <div class="document-card">
+                                        <div class="document-icon">
+                                            <svg width="24" height="24" viewBox="0 0 24 24">
+                                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                                <polyline points="14 2 14 8 20 8" />
+                                            </svg>
+                                        </div>
+                                        <div class="document-info">
+                                            <h4>${doc.name}</h4>
+                                            <p>${doc.type}</p>
+                                            <p style="margin-top: 4px; font-size: 11px;">${new Date(doc.uploadedAt).toLocaleDateString('ja-JP')}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="empty-state"><div class="empty-state-icon">📄</div><p>保管書類がアップロードされていません</p></div>'}
+                    </div>
+                `;
+            }
+        }
+
+        function renderVehicleForm() {
+            const vehicle = state.selectedVehicle;
+            return `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2>${vehicle ? '車両を編集' : '車両を追加'}</h2>
+                            <button class="close-btn" onclick="closeVehicleForm()">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form class="modal-body" onsubmit="submitVehicleForm(event)">
+                            <div class="form-group">
+                                <label>車両写真</label>
+                                <div class="file-upload">
+                                    <input type="file" id="vehicle-image" accept="image/*" onchange="handleImageUpload(event)">
+                                    <label for="vehicle-image" class="file-upload-label">
+                                        <svg width="18" height="18" viewBox="0 0 24 24">
+                                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                                            <circle cx="9" cy="9" r="2"/>
+                                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                                        </svg>
+                                        写真を選択
+                                    </label>
+                                </div>
+                                ${vehicle && vehicle.image ? `<div class="file-preview"><img src="${vehicle.image}" alt="Preview"></div>` : ''}
+                                <div id="image-preview"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>車両番号</label>
+                                <input type="text" class="form-control" name="number" placeholder="例: あ123-45" value="${vehicle ? vehicle.number : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>車両名</label>
+                                <input type="text" class="form-control" name="name" placeholder="例: トヨタ ハイエース" value="${vehicle ? vehicle.name : ''}" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>年式</label>
+                                    <input type="number" class="form-control" name="year" value="${vehicle ? vehicle.year : new Date().getFullYear()}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>走行距離 (km)</label>
+                                    <input type="number" class="form-control" name="mileage" value="${vehicle ? vehicle.mileage : 0}" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>購入価格 (円)</label>
+                                    <input type="number" class="form-control" name="purchasePrice" value="${vehicle ? vehicle.purchasePrice : 0}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>購入日</label>
+                                    <input type="date" class="form-control" name="purchaseDate" value="${vehicle ? vehicle.purchaseDate : ''}" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>車検満了日</label>
+                                    <input type="date" class="form-control" name="inspectionDate" value="${vehicle ? vehicle.inspectionDate : ''}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>保険満了日</label>
+                                    <input type="date" class="form-control" name="insuranceDate" value="${vehicle ? vehicle.insuranceDate : ''}" required>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" onclick="closeVehicleForm()">キャンセル</button>
+                                <button type="submit" class="btn-primary">
+                                    <svg width="18" height="18" viewBox="0 0 24 24">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    保存
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRepairForm() {
+            const repair = state.editingRepair;
+            const isEditing = repair !== null;
+            
+            return `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2>${isEditing ? '修繕記録を編集' : '修繕記録を追加'}</h2>
+                            <button class="close-btn" onclick="closeRepairForm()">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form class="modal-body" onsubmit="submitRepairForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${repair.id}">` : ''}
+                            <div class="form-group">
+                                <label>実施日</label>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? repair.date : new Date().toISOString().split('T')[0]}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>作業内容</label>
+                                <input type="text" class="form-control" name="type" placeholder="例: オイル交換" value="${isEditing ? repair.type : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>費用 (円)</label>
+                                <input type="number" class="form-control" name="cost" value="${isEditing ? repair.cost : 0}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>工場名</label>
+                                <input type="text" class="form-control" name="garage" placeholder="例: トヨタディーラー札幌" value="${isEditing ? repair.garage : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>備考</label>
+                                <textarea class="form-control" name="notes" placeholder="メモや特記事項">${isEditing && repair.notes ? repair.notes : ''}</textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" onclick="closeRepairForm()">キャンセル</button>
+                                <button type="submit" class="btn-primary">
+                                    <svg width="18" height="18" viewBox="0 0 24 24">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    保存
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFuelForm() {
+            const fuel = state.editingFuel;
+            const isEditing = fuel !== null;
+            
+            return `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2>${isEditing ? '燃料記録を編集' : '燃料記録を追加'}</h2>
+                            <button class="close-btn" onclick="closeFuelForm()">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form class="modal-body" onsubmit="submitFuelForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${fuel.id}">` : ''}
+                            <div class="form-group">
+                                <label>給油日</label>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? fuel.date : new Date().toISOString().split('T')[0]}" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>給油量 (L)</label>
+                                    <input type="number" step="0.1" class="form-control" name="liters" value="${isEditing ? fuel.liters : 0}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>費用 (円)</label>
+                                    <input type="number" class="form-control" name="cost" value="${isEditing ? fuel.cost : 0}" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>走行距離 (km)</label>
+                                    <input type="number" class="form-control" name="mileage" value="${isEditing ? fuel.mileage : 0}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>燃費 (km/L)</label>
+                                    <input type="number" step="0.1" class="form-control" name="fuelEfficiency" value="${isEditing ? fuel.fuelEfficiency : 0}" required>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" onclick="closeFuelForm()">キャンセル</button>
+                                <button type="submit" class="btn-primary">
+                                    <svg width="18" height="18" viewBox="0 0 24 24">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    保存
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAccidentForm() {
+            const accident = state.editingAccident;
+            const isEditing = accident !== null;
+            
+            return `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2>${isEditing ? '事故記録を編集' : '事故記録を追加'}</h2>
+                            <button class="close-btn" onclick="closeAccidentForm()">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form class="modal-body" onsubmit="submitAccidentForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${accident.id}">` : ''}
+                            <div class="form-group">
+                                <label>発生日</label>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? accident.date : new Date().toISOString().split('T')[0]}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>事故種類</label>
+                                <input type="text" class="form-control" name="type" placeholder="例: 単独事故、物損事故" value="${isEditing ? accident.type : ''}" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>場所</label>
+                                    <input type="text" class="form-control" name="location" placeholder="例: 札幌市中央区" value="${isEditing ? accident.location : ''}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>修理費 (円)</label>
+                                    <input type="number" class="form-control" name="repairCost" value="${isEditing ? accident.repairCost : 0}" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>詳細</label>
+                                <textarea class="form-control" name="description" placeholder="事故の詳細、報告書の保存場所、ドラレコ映像の場所などを記入" rows="4">${isEditing && accident.description ? accident.description : ''}</textarea>
+                            </div>
+                            <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 12px; margin-top: 16px;">
+                                <p style="font-size: 13px; color: #1e40af; margin: 0;">
+                                    💡 <strong>ヒント:</strong> PDFや動画ファイルは社内サーバーやGoogleドライブに保存し、そのリンクを詳細欄に記載することをおすすめします！
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" onclick="closeAccidentForm()">キャンセル</button>
+                                <button type="submit" class="btn-primary">
+                                    <svg width="18" height="18" viewBox="0 0 24 24">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    保存
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDocumentForm() {
+            return `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2>書類を追加</h2>
+                            <button class="close-btn" onclick="closeDocumentForm()">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <form class="modal-body" onsubmit="submitDocumentForm(event)">
+                            <div class="form-group">
+                                <label>書類名</label>
+                                <input type="text" class="form-control" name="name" placeholder="例: 車検証" required>
+                            </div>
+                            <div class="form-group">
+                                <label>種類</label>
+                                <select class="form-control" name="type" required>
+                                    <option value="">選択してください</option>
+                                    <option value="車検証">車検証</option>
+                                    <option value="保険証券">保険証券</option>
+                                    <option value="点検記録">点検記録</option>
+                                    <option value="その他">その他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>ファイル（PDF推奨）</label>
+                                <p style="font-size: 12px; color: #64748b; margin-bottom: 8px;">※デモのため、ファイルは実際にはアップロードされません</p>
+                                <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.jpeg,.png">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" onclick="closeDocumentForm()">キャンセル</button>
+                                <button type="submit" class="btn-primary">
+                                    <svg width="18" height="18" viewBox="0 0 24 24">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    保存
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderEmergencyModal() {
+            return `
+                <div class="modal-overlay" onclick="closeEmergencyModal()">
+                    <div class="modal" onclick="event.stopPropagation()" style="max-width: 800px;">
+                        <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white;">
+                            <h2 style="color: white;">🚨 緊急時対応マニュアル</h2>
+                            <button class="close-btn" onclick="closeEmergencyModal()" style="color: white;">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="padding: 32px;">
+                            <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <h3 style="color: #dc2626; margin-bottom: 16px; font-size: 18px;">📋 事故発生時の対応手順</h3>
+                                <ol style="margin: 0; padding-left: 24px; line-height: 2;">
+                                    <li><strong>負傷者の救護</strong> - 必要に応じて119番通報</li>
+                                    <li><strong>二次災害防止</strong> - 車を安全な場所へ移動、三角表示板設置</li>
+                                    <li><strong>警察へ通報</strong> - 110番で事故状況を報告</li>
+                                    <li><strong>相手方情報の確認</strong> - 氏名、連絡先、車両番号、保険会社</li>
+                                    <li><strong>現場記録</strong> - 写真撮影（車両損傷、事故現場、ブレーキ痕等）</li>
+                                    <li><strong>保険会社へ連絡</strong> - 速やかに事故報告</li>
+                                    <li><strong>会社へ報告</strong> - 担当者に連絡</li>
+                                </ol>
+                            </div>
+
+                            <div style="background: #dbeafe; border: 2px solid #93c5fd; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <h3 style="color: #0066cc; margin-bottom: 16px; font-size: 18px;">📞 緊急連絡先</h3>
+                                <div style="display: grid; gap: 12px;">
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>🚨 緊急通報（救急）</strong></span>
+                                        <a href="tel:119" style="color: #dc2626; text-decoration: none; font-weight: bold;">119</a>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>🚓 警察（事故）</strong></span>
+                                        <a href="tel:110" style="color: #dc2626; text-decoration: none; font-weight: bold;">110</a>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>📞 保険会社</strong></span>
+                                        <span style="color: #0066cc; font-weight: bold;">[保険会社の電話番号]</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>🚗 レッカー・ロードサービス</strong></span>
+                                        <span style="color: #0066cc; font-weight: bold;">[ロードサービスの電話番号]</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 8px;">
+                                        <span><strong>🏢 会社担当者</strong></span>
+                                        <span style="color: #0066cc; font-weight: bold;">[担当者の電話番号]</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: #fef3c7; border: 2px solid #fcd34d; border-radius: 12px; padding: 16px;">
+                                <p style="margin: 0; color: #92400e; font-size: 14px;">
+                                    💡 <strong>ヒント:</strong> この緊急連絡先は編集できません。実際の電話番号を紙に書いて車内に保管することをおすすめします。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Event handlers
+        let uploadedImage = null;
+        let uploadedAccidentPDF = null;
+        let uploadedAccidentVideo = null;
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImage = e.target.result;
+                    document.getElementById('image-preview').innerHTML = `
+                        <div class="file-preview">
+                            <img src="${e.target.result}" alt="Preview">
+                            <p>選択された画像</p>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleAccidentPDFUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedAccidentPDF = {
+                        name: file.name,
+                        data: e.target.result
+                    };
+                    document.getElementById('accident-pdf-preview').innerHTML = `
+                        <div class="file-preview" style="margin-top: 12px;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" style="color: #ef4444;">
+                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                            <div style="flex: 1;">
+                                <p style="font-weight: 600;">${file.name}</p>
+                                <p style="font-size: 12px; color: #64748b;">${(file.size / 1024).toFixed(1)} KB</p>
+                            </div>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleAccidentVideoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedAccidentVideo = {
+                        name: file.name,
+                        data: e.target.result
+                    };
+                    document.getElementById('accident-video-preview').innerHTML = `
+                        <div class="file-preview" style="margin-top: 12px;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" style="color: #8b5cf6;">
+                                <polygon points="23 7 16 12 23 17 23 7"/>
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                            </svg>
+                            <div style="flex: 1;">
+                                <p style="font-weight: 600;">${file.name}</p>
+                                <p style="font-size: 12px; color: #64748b;">${(file.size / 1024 / 1024).toFixed(1)} MB</p>
+                            </div>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function openAddVehicle() {
+            state.selectedVehicle = null;
+            uploadedImage = null;
+            state.showAddVehicle = true;
+            render();
+        }
+
+        function editVehicle() {
+            uploadedImage = state.selectedVehicle.image;
+            state.showAddVehicle = true;
+            render();
+        }
+
+        function closeVehicleForm() {
+            state.showAddVehicle = false;
+            uploadedImage = null;
+            isSubmitting = false;  // フォーム送信フラグをリセット
+            if (state.activeView !== 'detail') {
+                state.selectedVehicle = null;
+            }
+            render();
+        }
+
+        function openAddRepair() {
+            state.editingRepair = null;
+            state.showAddRepair = true;
+            render();
+        }
+
+        function editRepair(repairId) {
+            const repair = state.repairs.find(r => r.id === repairId);
+            if (repair) {
+                state.editingRepair = repair;
+                state.showAddRepair = true;
+                render();
+            }
+        }
+
+        function closeRepairForm() {
+            state.showAddRepair = false;
+            state.editingRepair = null;
+            render();
+        }
+
+        function openAddFuel() {
+            state.editingFuel = null;
+            state.showAddFuel = true;
+            render();
+        }
+
+        function editFuel(fuelId) {
+            const fuel = state.fuelRecords.find(f => f.id === fuelId);
+            if (fuel) {
+                state.editingFuel = fuel;
+                state.showAddFuel = true;
+                render();
+            }
+        }
+
+        function closeFuelForm() {
+            state.showAddFuel = false;
+            state.editingFuel = null;
+            render();
+        }
+
+        function openAddAccident() {
+            state.editingAccident = null;
+            state.showAddAccident = true;
+            render();
+        }
+
+        function editAccident(accidentId) {
+            const accident = state.accidents.find(a => a.id === accidentId);
+            if (accident) {
+                state.editingAccident = accident;
+                state.showAddAccident = true;
+                render();
+            }
+        }
+
+        function closeAccidentForm() {
+            state.showAddAccident = false;
+            state.editingAccident = null;
+            render();
+        }
+
+        function viewFile(data, type, name) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.zIndex = '200';
+            
+            if (type === 'pdf') {
+                modal.innerHTML = `
+                    <div class="modal" onclick="event.stopPropagation()" style="max-width: 90vw; max-height: 90vh;">
+                        <div class="modal-header">
+                            <h2>${name}</h2>
+                            <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div style="padding: 24px; height: 80vh; overflow: auto;">
+                            <iframe src="${data}" style="width: 100%; height: 100%; border: none;"></iframe>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'video') {
+                modal.innerHTML = `
+                    <div class="modal" onclick="event.stopPropagation()" style="max-width: 90vw;">
+                        <div class="modal-header">
+                            <h2>${name}</h2>
+                            <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div style="padding: 24px;">
+                            <video controls style="width: 100%; max-height: 70vh; background: #000; border-radius: 8px;">
+                                <source src="${data}">
+                                お使いのブラウザは動画再生に対応していません。
+                            </video>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            };
+            
+            document.body.appendChild(modal);
+        }
+
+        function printFile(data) {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>印刷</title>
+                    </head>
+                    <body style="margin: 0;">
+                        <iframe src="${data}" style="width: 100%; height: 100vh; border: none;" onload="window.print();"></iframe>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        function showNotificationSettings() {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.zIndex = '200';
+            
+            const notificationDays = localStorage.getItem('notificationDays') || '30';
+            const notificationEmail = localStorage.getItem('notificationEmail') || '';
+            
+            modal.innerHTML = `
+                <div class="modal" onclick="event.stopPropagation()" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h2>通知設定</h2>
+                        <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">
+                            <svg width="24" height="24" viewBox="0 0 24 24">
+                                <path d="M18 6 6 18" />
+                                <path d="m6 6 12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>車検・保険の通知タイミング</label>
+                            <select class="form-control" id="notificationDays">
+                                <option value="7" ${notificationDays === '7' ? 'selected' : ''}>7日前</option>
+                                <option value="14" ${notificationDays === '14' ? 'selected' : ''}>14日前</option>
+                                <option value="30" ${notificationDays === '30' ? 'selected' : ''}>30日前</option>
+                                <option value="60" ${notificationDays === '60' ? 'selected' : ''}>60日前</option>
+                            </select>
+                            <p style="font-size: 13px; color: #64748b; margin-top: 8px;">
+                                車検・保険の満了日がこの日数前になるとダッシュボードに通知が表示されます
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>通知用メールアドレス</label>
+                            <input type="email" class="form-control" id="notificationEmail" placeholder="example@company.com" value="${notificationEmail}">
+                            <p style="font-size: 13px; color: #64748b; margin-top: 8px;">
+                                ※この機能は現在デモ版のため、実際のメール送信は行われません
+                            </p>
+                        </div>
+                        
+                        <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 16px; margin-top: 20px;">
+                            <div style="display: flex; gap: 12px; align-items: start;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" style="color: #3b82f6; flex-shrink: 0;">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 16v-4"/>
+                                    <path d="M12 8h.01"/>
+                                </svg>
+                                <div style="font-size: 13px; color: #1e40af;">
+                                    <strong>ブラウザ通知について</strong><br>
+                                    ブラウザを開いた際に車検・保険の期限が近い車両がある場合、画面上部に通知が表示されます。
+                                    メール通知機能は本格実装時にサーバー側で設定可能になります。
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">キャンセル</button>
+                            <button class="btn-primary" onclick="saveNotificationSettings()">
+                                <svg width="18" height="18" viewBox="0 0 24 24">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            };
+            
+            document.body.appendChild(modal);
+        }
+
+        function saveNotificationSettings() {
+            const days = document.getElementById('notificationDays').value;
+            const email = document.getElementById('notificationEmail').value;
+            
+            localStorage.setItem('notificationDays', days);
+            localStorage.setItem('notificationEmail', email);
+            
+            alert('通知設定を保存しました！');
+            document.querySelector('.modal-overlay[style*="z-index: 200"]').remove();
+            render();
+        }
+
+        function openAddDocument() {
+            state.showAddDocument = true;
+            render();
+        }
+
+        function closeDocumentForm() {
+            state.showAddDocument = false;
+            render();
+        }
+
+        function openEmergencyModal() {
+            state.showEmergencyModal = true;
+            render();
+        }
+
+        function closeEmergencyModal() {
+            state.showEmergencyModal = false;
+            render();
+        }
+
+        function closeModal(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                if (state.showAddVehicle) closeVehicleForm();
+                else if (state.showAddRepair) closeRepairForm();
+                else if (state.showAddFuel) closeFuelForm();
+                else if (state.showAddAccident) closeAccidentForm();
+                else if (state.showAddDocument) closeDocumentForm();
+            }
+        }
+
+        function selectVehicle(vehicleId) {
+            state.selectedVehicle = state.vehicles.find(v => v.id === vehicleId);
+            state.activeView = 'detail';
+            state.activeTab = 'basic';
+            render();
+            window.scrollTo(0, 0);
+        }
+
+        function backToDashboard() {
+            state.activeView = 'dashboard';
+            state.selectedVehicle = null;
+            render();
+            window.scrollTo(0, 0);
+        }
+
+        function switchTab(tabName) {
+            state.activeTab = tabName;
+            render();
+        }
+
+        let isSubmitting = false;
+
+        function submitVehicleForm(event) {
+            event.preventDefault();
+            
+            // 二重送信防止
+            if (isSubmitting) {
+                console.log('⚠️ 二重送信を防止しました');
+                return;
+            }
+            isSubmitting = true;
+            
+            try {
+                const formData = new FormData(event.target);
+                
+                // 数値の安全な変換
+                const year = parseInt(formData.get('year')) || 0;
+                const mileage = parseInt(formData.get('mileage')) || 0;
+                const purchasePrice = parseInt(formData.get('purchasePrice')) || 0;
+                
+                const vehicleData = {
+                    id: state.selectedVehicle?.id,
+                    number: formData.get('number') || '',
+                    name: formData.get('name') || '',
+                    year: year,
+                    mileage: mileage,
+                    purchasePrice: purchasePrice,
+                    purchaseDate: formData.get('purchaseDate') || '',
+                    inspectionDate: formData.get('inspectionDate') || '',
+                    insuranceDate: formData.get('insuranceDate') || '',
+                    image: uploadedImage || state.selectedVehicle?.image || null
+                };
+                
+                console.log('📋 フォームデータ:', vehicleData);
+                
+                saveVehicle(vehicleData).finally(() => {
+                    isSubmitting = false;
+                });
+            } catch (error) {
+                console.error('❌ フォーム送信エラー:', error);
+                alert('フォーム送信エラー: ' + error.message);
+                isSubmitting = false;
+            }
+        }
+
+        function submitRepairForm(event) {
+            event.preventDefault();
+            try {
+                const formData = new FormData(event.target);
+                const repairData = {
+                    id: formData.get('id') || `r${Date.now()}`,
+                    date: formData.get('date') || '',
+                    type: formData.get('type') || '',
+                    cost: parseInt(formData.get('cost')) || 0,
+                    garage: formData.get('garage') || '',
+                    notes: formData.get('notes') || ''
+                };
+                console.log('🔧 修繕データ:', repairData);
+                saveRepair(repairData);
+            } catch (error) {
+                console.error('❌ 修繕フォーム送信エラー:', error);
+                alert('送信エラー: ' + error.message);
+            }
+        }
+
+        function submitFuelForm(event) {
+            event.preventDefault();
+            try {
+                const formData = new FormData(event.target);
+                const fuelData = {
+                    id: formData.get('id') || `f${Date.now()}`,
+                    date: formData.get('date') || '',
+                    liters: parseFloat(formData.get('liters')) || 0,
+                    cost: parseInt(formData.get('cost')) || 0,
+                    mileage: parseInt(formData.get('mileage')) || 0,
+                    fuelEfficiency: parseFloat(formData.get('fuelEfficiency')) || 0
+                };
+                console.log('⛽ 燃料データ:', fuelData);
+                saveFuel(fuelData);
+            } catch (error) {
+                console.error('❌ 燃料フォーム送信エラー:', error);
+                alert('送信エラー: ' + error.message);
+            }
+        }
+
+        function submitAccidentForm(event) {
+            event.preventDefault();
+            try {
+                console.log('📝 フォーム送信開始');
+                const formData = new FormData(event.target);
+                const accidentData = {
+                    id: formData.get('id') || `a${Date.now()}`,
+                    date: formData.get('date'),
+                    type: formData.get('type'),
+                    location: formData.get('location'),
+                    repairCost: parseInt(formData.get('repairCost')) || 0,
+                    description: formData.get('description')
+                };
+                console.log('📦 送信データ:', accidentData);
+                saveAccident(accidentData);
+            } catch (error) {
+                console.error('❌ フォーム送信エラー:', error);
+                alert('保存中にエラーが発生しました: ' + error.message);
+            }
+        }
+
+        function submitDocumentForm(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const documentData = {
+                name: formData.get('name'),
+                type: formData.get('type'),
+                fileName: formData.get('file')?.name || 'document.pdf'
+            };
+            saveDocument(documentData);
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
