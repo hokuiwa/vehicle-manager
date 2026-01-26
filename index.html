@@ -1082,37 +1082,42 @@
 
         function exportAllDataCSV() {
             try {
-                // Export vehicles
-                let csvContent = "data:text/csv;charset=utf-8,";
+                // Build CSV content
+                let csvContent = "";
                 
                 // Vehicles
                 csvContent += "=== 車両情報 ===\n";
                 csvContent += "車両番号,車両名,年式,走行距離,購入金額,購入日,車検日,保険更新日\n";
                 state.vehicles.forEach(v => {
-                    csvContent += `${v.number},${v.name},${v.year},${v.mileage},${v.purchasePrice},${v.purchaseDate},${v.inspectionDate},${v.insuranceDate}\n`;
+                    csvContent += `${v.number || ''},${v.name || ''},${v.year || ''},${v.mileage || 0},${v.purchasePrice || 0},${v.purchaseDate || ''},${v.inspectionDate || ''},${v.insuranceDate || ''}\n`;
                 });
                 
                 csvContent += "\n=== 修繕記録 ===\n";
                 csvContent += "車両番号,日付,作業内容,費用,工場名,備考\n";
                 state.repairs.forEach(r => {
                     const vehicle = state.vehicles.find(v => v.id === r.vehicleId);
-                    csvContent += `${vehicle?.number || ''},${r.date},${r.type},${r.cost},${r.garage},"${r.notes || ''}"\n`;
+                    csvContent += `${vehicle?.number || ''},${r.date || ''},${r.type || ''},${r.cost || 0},${r.garage || ''},"${(r.notes || '').replace(/"/g, '""')}"\n`;
                 });
                 
                 csvContent += "\n=== 燃料記録 ===\n";
                 csvContent += "車両番号,日付,給油量,費用,走行距離,燃費\n";
                 state.fuelRecords.forEach(f => {
                     const vehicle = state.vehicles.find(v => v.id === f.vehicleId);
-                    csvContent += `${vehicle?.number || ''},${f.date},${f.liters},${f.cost},${f.mileage},${f.fuelEfficiency}\n`;
+                    csvContent += `${vehicle?.number || ''},${f.date || ''},${f.liters || 0},${f.cost || 0},${f.mileage || 0},${f.fuelEfficiency || 0}\n`;
                 });
                 
-                const encodedUri = encodeURI(csvContent);
+                // Add UTF-8 BOM to prevent garbled text
+                const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                
                 const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
+                link.setAttribute("href", url);
                 link.setAttribute("download", `車両管理データ_${new Date().toISOString().split('T')[0]}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                URL.revokeObjectURL(url);
                 
                 alert('✅ CSVファイルをダウンロードしました！');
             } catch (error) {
@@ -1190,9 +1195,16 @@
 
         // Initialize
         async function init() {
-            await loadData();
-            render();
-            setTimeout(drawCharts, 100);
+            try {
+                console.log('🚀 システム初期化開始');
+                await loadData();
+                render();
+                setTimeout(drawCharts, 100);
+                console.log('✅ システム初期化完了');
+            } catch (error) {
+                console.error('❌ 初期化エラー:', error);
+                alert('システムの初期化に失敗しました。ページをリロードしてください。');
+            }
         }
 
         // Chart drawing functions
@@ -1905,29 +1917,54 @@
 
         // Render
         function render() {
-            const app = document.getElementById('app');
-            
-            if (state.isLoading) {
-                app.innerHTML = '<div class="loading">読み込み中...</div>';
-                return;
-            }
+            try {
+                const app = document.getElementById('app');
+                
+                if (!app) {
+                    console.error('❌ アプリ要素が見つかりません');
+                    return;
+                }
+                
+                if (state.isLoading) {
+                    app.innerHTML = '<div class="loading">読み込み中...</div>';
+                    return;
+                }
 
-            app.innerHTML = `
-                ${renderHeader()}
-                <div class="container">
-                    ${state.activeView === 'dashboard' ? renderDashboard() : renderDetail()}
-                </div>
-                ${state.showAddVehicle ? renderVehicleForm() : ''}
-                ${state.showAddRepair ? renderRepairForm() : ''}
-                ${state.showAddFuel ? renderFuelForm() : ''}
-                ${state.showAddAccident ? renderAccidentForm() : ''}
-                ${state.showAddDocument ? renderDocumentForm() : ''}
-                ${state.showEmergencyModal ? renderEmergencyModal() : ''}
-            `;
+                app.innerHTML = `
+                    ${renderHeader()}
+                    <div class="container">
+                        ${state.activeView === 'dashboard' ? renderDashboard() : renderDetail()}
+                    </div>
+                    ${state.showAddVehicle ? renderVehicleForm() : ''}
+                    ${state.showAddRepair ? renderRepairForm() : ''}
+                    ${state.showAddFuel ? renderFuelForm() : ''}
+                    ${state.showAddAccident ? renderAccidentForm() : ''}
+                    ${state.showAddDocument ? renderDocumentForm() : ''}
+                    ${state.showEmergencyModal ? renderEmergencyModal() : ''}
+                `;
 
-            // Redraw charts after rendering dashboard
-            if (state.activeView === 'dashboard') {
-                setTimeout(drawCharts, 100);
+                // Redraw charts after rendering dashboard
+                if (state.activeView === 'dashboard') {
+                    setTimeout(drawCharts, 100);
+                }
+            } catch (error) {
+                console.error('❌ レンダリングエラー:', error);
+                const app = document.getElementById('app');
+                if (app) {
+                    app.innerHTML = `
+                        <div style="padding: 40px; text-align: center;">
+                            <h2 style="color: #dc2626;">⚠️ エラーが発生しました</h2>
+                            <p style="color: #64748b; margin: 20px 0;">${error.message}</p>
+                            <button class="btn-primary" onclick="location.reload()" style="margin: 0 auto;">
+                                ページを再読み込み
+                            </button>
+                            <br><br>
+                            <button class="btn-secondary" onclick="localStorage.clear(); location.reload()" style="margin: 0 auto;">
+                                データをリセットして再読み込み
+                            </button>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -2067,13 +2104,13 @@
         }
 
         function calculateTotalCosts() {
-            const totalRepairs = state.repairs.reduce((sum, r) => sum + r.cost, 0);
-            const totalFuel = state.fuelRecords.reduce((sum, f) => sum + f.cost, 0);
+            const totalRepairs = state.repairs.reduce((sum, r) => sum + (r.cost || 0), 0);
+            const totalFuel = state.fuelRecords.reduce((sum, f) => sum + (f.cost || 0), 0);
             const totalPurchase = state.vehicles.reduce((sum, v) => sum + (v.purchasePrice || 0), 0);
             
             // Calculate average fuel efficiency
             const avgFuelEfficiency = state.fuelRecords.length > 0 
-                ? state.fuelRecords.reduce((sum, f) => sum + f.fuelEfficiency, 0) / state.fuelRecords.length 
+                ? state.fuelRecords.reduce((sum, f) => sum + (f.fuelEfficiency || 0), 0) / state.fuelRecords.length 
                 : 0;
             
             // Calculate this month's costs
@@ -2081,22 +2118,22 @@
             const thisMonthRepairs = state.repairs.filter(r => {
                 const date = new Date(r.date);
                 return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-            }).reduce((sum, r) => sum + r.cost, 0);
+            }).reduce((sum, r) => sum + (r.cost || 0), 0);
             
             const thisMonthFuel = state.fuelRecords.filter(f => {
                 const date = new Date(f.date);
                 return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
-            }).reduce((sum, f) => sum + f.cost, 0);
+            }).reduce((sum, f) => sum + (f.cost || 0), 0);
             
             return {
-                repairs: totalRepairs,
-                fuel: totalFuel,
-                purchase: totalPurchase,
-                total: totalRepairs + totalFuel + totalPurchase,
-                avgFuelEfficiency,
-                thisMonthRepairs,
-                thisMonthFuel,
-                thisMonthTotal: thisMonthRepairs + thisMonthFuel
+                repairs: totalRepairs || 0,
+                fuel: totalFuel || 0,
+                purchase: totalPurchase || 0,
+                total: (totalRepairs || 0) + (totalFuel || 0) + (totalPurchase || 0),
+                avgFuelEfficiency: avgFuelEfficiency || 0,
+                thisMonthRepairs: thisMonthRepairs || 0,
+                thisMonthFuel: thisMonthFuel || 0,
+                thisMonthTotal: (thisMonthRepairs || 0) + (thisMonthFuel || 0)
             };
         }
 
@@ -3398,6 +3435,7 @@
         function closeVehicleForm() {
             state.showAddVehicle = false;
             uploadedImage = null;
+            isSubmitting = false;  // フォーム送信フラグをリセット
             if (state.activeView !== 'detail') {
                 state.selectedVehicle = null;
             }
@@ -3689,53 +3727,75 @@
             
             try {
                 const formData = new FormData(event.target);
+                
+                // 数値の安全な変換
+                const year = parseInt(formData.get('year')) || 0;
+                const mileage = parseInt(formData.get('mileage')) || 0;
+                const purchasePrice = parseInt(formData.get('purchasePrice')) || 0;
+                
                 const vehicleData = {
                     id: state.selectedVehicle?.id,
-                    number: formData.get('number'),
-                    name: formData.get('name'),
-                    year: parseInt(formData.get('year')),
-                    mileage: parseInt(formData.get('mileage')),
-                    purchasePrice: parseInt(formData.get('purchasePrice')),
-                    purchaseDate: formData.get('purchaseDate'),
-                    inspectionDate: formData.get('inspectionDate'),
-                    insuranceDate: formData.get('insuranceDate'),
+                    number: formData.get('number') || '',
+                    name: formData.get('name') || '',
+                    year: year,
+                    mileage: mileage,
+                    purchasePrice: purchasePrice,
+                    purchaseDate: formData.get('purchaseDate') || '',
+                    inspectionDate: formData.get('inspectionDate') || '',
+                    insuranceDate: formData.get('insuranceDate') || '',
                     image: uploadedImage || state.selectedVehicle?.image || null
                 };
+                
+                console.log('📋 フォームデータ:', vehicleData);
+                
                 saveVehicle(vehicleData).finally(() => {
                     isSubmitting = false;
                 });
             } catch (error) {
                 console.error('❌ フォーム送信エラー:', error);
+                alert('フォーム送信エラー: ' + error.message);
                 isSubmitting = false;
             }
         }
 
         function submitRepairForm(event) {
             event.preventDefault();
-            const formData = new FormData(event.target);
-            const repairData = {
-                id: formData.get('id') || `r${Date.now()}`,
-                date: formData.get('date'),
-                type: formData.get('type'),
-                cost: parseInt(formData.get('cost')),
-                garage: formData.get('garage'),
-                notes: formData.get('notes')
-            };
-            saveRepair(repairData);
+            try {
+                const formData = new FormData(event.target);
+                const repairData = {
+                    id: formData.get('id') || `r${Date.now()}`,
+                    date: formData.get('date') || '',
+                    type: formData.get('type') || '',
+                    cost: parseInt(formData.get('cost')) || 0,
+                    garage: formData.get('garage') || '',
+                    notes: formData.get('notes') || ''
+                };
+                console.log('🔧 修繕データ:', repairData);
+                saveRepair(repairData);
+            } catch (error) {
+                console.error('❌ 修繕フォーム送信エラー:', error);
+                alert('送信エラー: ' + error.message);
+            }
         }
 
         function submitFuelForm(event) {
             event.preventDefault();
-            const formData = new FormData(event.target);
-            const fuelData = {
-                id: formData.get('id') || `f${Date.now()}`,
-                date: formData.get('date'),
-                liters: parseFloat(formData.get('liters')),
-                cost: parseInt(formData.get('cost')),
-                mileage: parseInt(formData.get('mileage')),
-                fuelEfficiency: parseFloat(formData.get('fuelEfficiency'))
-            };
-            saveFuel(fuelData);
+            try {
+                const formData = new FormData(event.target);
+                const fuelData = {
+                    id: formData.get('id') || `f${Date.now()}`,
+                    date: formData.get('date') || '',
+                    liters: parseFloat(formData.get('liters')) || 0,
+                    cost: parseInt(formData.get('cost')) || 0,
+                    mileage: parseInt(formData.get('mileage')) || 0,
+                    fuelEfficiency: parseFloat(formData.get('fuelEfficiency')) || 0
+                };
+                console.log('⛽ 燃料データ:', fuelData);
+                saveFuel(fuelData);
+            } catch (error) {
+                console.error('❌ 燃料フォーム送信エラー:', error);
+                alert('送信エラー: ' + error.message);
+            }
         }
 
         function submitAccidentForm(event) {
