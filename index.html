@@ -1157,7 +1157,10 @@
                             }
                             
                             if (inVehicleSection && line) {
-                                const parts = line.split(',');
+                                // タブ区切りかカンマ区切りかを自動判定
+                                const delimiter = line.includes('\t') ? '\t' : ',';
+                                const parts = line.split(delimiter).map(p => p.trim());
+                                
                                 if (parts.length >= 8) {
                                     const vehicleData = {
                                         id: `v${Date.now()}_${importCount}`,
@@ -1230,8 +1233,11 @@
                             
                             if (inFuelSection && line) {
                                 console.log(`📊 行 ${i}:`, line);
-                                const parts = line.split('\t');
-                                console.log('  分割結果 (${parts.length}項目):', parts);
+                                
+                                // タブ区切りかカンマ区切りかを自動判定
+                                const delimiter = line.includes('\t') ? '\t' : ',';
+                                const parts = line.split(delimiter);
+                                console.log(`  分割結果 (${parts.length}項目、区切り: ${delimiter === '\t' ? 'タブ' : 'カンマ'}):`, parts);
                                 
                                 if (parts.length >= 6) {
                                     const vehicleNumber = parts[0].trim();
@@ -1320,7 +1326,10 @@
                             }
                             
                             if (inRepairSection && line) {
-                                const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, '')); // カンマ区切り、引用符削除
+                                // タブ区切りかカンマ区切りかを自動判定
+                                const delimiter = line.includes('\t') ? '\t' : ',';
+                                const parts = line.split(delimiter).map(p => p.trim().replace(/^"|"$/g, ''));
+                                
                                 if (parts.length >= 5) {
                                     // 車両番号から車両IDを取得
                                     const vehicleNumber = parts[0];
