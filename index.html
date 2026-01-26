@@ -1205,56 +1205,78 @@
                 reader.onload = async (event) => {
                     try {
                         const csv = event.target.result;
+                        console.log('📄 CSVファイル全体:', csv);
                         const lines = csv.split('\n');
+                        console.log('📝 全行数:', lines.length);
                         
                         let importCount = 0;
                         let inFuelSection = false;
+                        let skippedCount = 0;
                         
                         for (let i = 0; i < lines.length; i++) {
                             const line = lines[i].trim();
                             
-                            if (line === '=== 燃料記録 ===') {
+                            if (line.includes('燃料記録')) {
+                                console.log('✅ 燃料記録セクション発見:', i, line);
                                 inFuelSection = true;
                                 i++; // Skip header line
                                 continue;
                             }
                             
                             if (line.startsWith('===') && inFuelSection) {
-                                break; // End of fuel section
+                                console.log('🛑 セクション終了:', line);
+                                break;
                             }
                             
                             if (inFuelSection && line) {
-                                const parts = line.split('\t').map(p => p.trim()); // タブ区切り
+                                console.log(`📊 行 ${i}:`, line);
+                                const parts = line.split('\t');
+                                console.log('  分割結果 (${parts.length}項目):', parts);
+                                
                                 if (parts.length >= 6) {
-                                    // 車両番号から車両IDを取得
-                                    const vehicleNumber = parts[0];
-                                    const vehicle = state.vehicles.find(v => v.number === vehicleNumber);
+                                    const vehicleNumber = parts[0].trim();
+                                    console.log('  🚗 車両番号を検索:', vehicleNumber);
+                                    
+                                    const vehicle = state.vehicles.find(v => {
+                                        console.log(`    比較: "${v.number}" === "${vehicleNumber}" → ${v.number === vehicleNumber}`);
+                                        return v.number === vehicleNumber;
+                                    });
                                     
                                     if (vehicle) {
-                                        // 日付を変換 (2025/12/1 → 2025-12-01)
-                                        const dateParts = parts[1].split('/');
+                                        const dateParts = parts[1].trim().split('/');
                                         const formattedDate = dateParts.length === 3 
                                             ? `${dateParts[0]}-${dateParts[1].padStart(2, '0')}-${dateParts[2].padStart(2, '0')}`
-                                            : parts[1];
+                                            : parts[1].trim();
                                         
                                         const fuelData = {
                                             id: `f${Date.now()}_${importCount}`,
                                             vehicleId: vehicle.id,
                                             date: formattedDate,
-                                            liters: parseFloat(parts[2]) || 0,
-                                            cost: parseInt(parts[3]) || 0,
-                                            mileage: parseInt(parts[4]) || 0,
-                                            fuelEfficiency: parseFloat(parts[5]) || 0
+                                            liters: parseFloat(parts[2].trim()) || 0,
+                                            cost: parseInt(parts[3].trim()) || 0,
+                                            mileage: parseInt(parts[4].trim()) || 0,
+                                            fuelEfficiency: parseFloat(parts[5].trim()) || 0
                                         };
                                         
+                                        console.log('  ✅ インポート:', fuelData);
                                         storage.set(`fuel:${fuelData.id}`, JSON.stringify(fuelData));
                                         importCount++;
+                                    } else {
+                                        console.log('  ❌ 車両が見つかりません:', vehicleNumber);
+                                        console.log('  登録されている車両:', state.vehicles.map(v => v.number));
+                                        skippedCount++;
                                     }
+                                } else {
+                                    console.log('  ⚠️ データ不足 (6項目必要)');
                                 }
                             }
                         }
                         
-                        alert(`✅ ${importCount}件の燃料記録をインポートしました！`);
+                        let message = `✅ ${importCount}件の燃料記録をインポートしました！`;
+                        if (skippedCount > 0) {
+                            message += `\n⚠️ ${skippedCount}件はスキップされました（車両が見つからない）`;
+                        }
+                        alert(message);
                         await loadData();
                         render();
                     } catch (error) {
@@ -1262,7 +1284,7 @@
                         alert('インポートに失敗しました: ' + error.message);
                     }
                 };
-                reader.readAsText(file);
+                reader.readAsText(file, 'UTF-8');
             };
             input.click();
         }
@@ -2212,8 +2234,6 @@
                 ${alerts.length > 0 ? renderAlerts(alerts) : ''}
                 ${renderStats(totalCost)}
                 
-                ${renderToolbar()}
-                
                 <div class="vehicles-header">
                     <h2>車両一覧 (${filteredVehicles.length}台)</h2>
                 </div>
@@ -2278,16 +2298,24 @@
                 ? state.fuelRecords.reduce((sum, f) => sum + (f.fuelEfficiency || 0), 0) / state.fuelRecords.length 
                 : 0;
             
-            // Calculate this month's costs
+            // Calculate this fiscal year's costs (April to March)
             const today = new Date();
-            const thisMonthRepairs = state.repairs.filter(r => {
+            const currentMonth = today.getMonth(); // 0-11
+            const currentYear = today.getFullYear();
+            
+            // 年度の開始年を計算（4月以降なら今年、3月以前なら前年）
+            const fiscalYearStart = currentMonth >= 3 ? currentYear : currentYear - 1;
+            const fiscalStartDate = new Date(fiscalYearStart, 3, 1); // 4月1日
+            const fiscalEndDate = new Date(fiscalYearStart + 1, 2, 31, 23, 59, 59); // 翌年3月31日
+            
+            const thisFiscalYearRepairs = state.repairs.filter(r => {
                 const date = new Date(r.date);
-                return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+                return date >= fiscalStartDate && date <= fiscalEndDate;
             }).reduce((sum, r) => sum + (r.cost || 0), 0);
             
-            const thisMonthFuel = state.fuelRecords.filter(f => {
+            const thisFiscalYearFuel = state.fuelRecords.filter(f => {
                 const date = new Date(f.date);
-                return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+                return date >= fiscalStartDate && date <= fiscalEndDate;
             }).reduce((sum, f) => sum + (f.cost || 0), 0);
             
             return {
@@ -2296,9 +2324,10 @@
                 purchase: totalPurchase || 0,
                 total: (totalRepairs || 0) + (totalFuel || 0) + (totalPurchase || 0),
                 avgFuelEfficiency: avgFuelEfficiency || 0,
-                thisMonthRepairs: thisMonthRepairs || 0,
-                thisMonthFuel: thisMonthFuel || 0,
-                thisMonthTotal: (thisMonthRepairs || 0) + (thisMonthFuel || 0)
+                thisFiscalYearRepairs: thisFiscalYearRepairs || 0,
+                thisFiscalYearFuel: thisFiscalYearFuel || 0,
+                thisFiscalYearTotal: (thisFiscalYearRepairs || 0) + (thisFiscalYearFuel || 0),
+                fiscalYear: `${fiscalYearStart}年度`
             };
         }
 
@@ -2324,7 +2353,7 @@
                             <div>
                                 <p class="stat-label">総修繕費</p>
                                 <p class="stat-value">¥${costs.repairs.toLocaleString()}</p>
-                                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">今月: ¥${costs.thisMonthRepairs.toLocaleString()}</p>
+                                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">${costs.fiscalYear}: ¥${costs.thisFiscalYearRepairs.toLocaleString()}</p>
                             </div>
                             <svg class="icon-amber" width="32" height="32" viewBox="0 0 24 24">
                                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
@@ -2336,7 +2365,7 @@
                             <div>
                                 <p class="stat-label">総燃料費</p>
                                 <p class="stat-value">¥${costs.fuel.toLocaleString()}</p>
-                                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">今月: ¥${costs.thisMonthFuel.toLocaleString()}</p>
+                                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">${costs.fiscalYear}: ¥${costs.thisFiscalYearFuel.toLocaleString()}</p>
                             </div>
                             <svg class="icon-green" width="32" height="32" viewBox="0 0 24 24">
                                 <line x1="3" x2="15" y1="22" y2="22" />
@@ -2374,8 +2403,8 @@
                     <div class="stat-card">
                         <div class="stat-content">
                             <div>
-                                <p class="stat-label">今月の総コスト</p>
-                                <p class="stat-value">¥${costs.thisMonthTotal.toLocaleString()}</p>
+                                <p class="stat-label">${costs.fiscalYear}の総コスト</p>
+                                <p class="stat-value">¥${costs.thisFiscalYearTotal.toLocaleString()}</p>
                                 <p style="font-size: 12px; color: #64748b; margin-top: 4px;">修繕 + 燃料</p>
                             </div>
                             <svg class="icon-blue" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2511,18 +2540,7 @@
         }
 
         function getFilteredVehicles() {
-            let filtered = state.vehicles;
-
-            // Search filter
-            if (state.searchQuery) {
-                const query = state.searchQuery.toLowerCase();
-                filtered = filtered.filter(v => 
-                    v.name.toLowerCase().includes(query) || 
-                    v.number.toLowerCase().includes(query)
-                );
-            }
-
-            return filtered;
+            return state.vehicles;
         }
 
         function handleSearch(event) {
