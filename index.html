@@ -2229,7 +2229,7 @@
             const isInspectionSoon = daysUntilInspection < 30 && daysUntilInspection > 0;
 
             const vehicleRepairs = state.repairs.filter(r => r.vehicleId === vehicle.id);
-            const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + r.cost, 0);
+            const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
 
             return `
                 <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
@@ -2239,25 +2239,25 @@
                     </div>
                     <div class="vehicle-content">
                         <div class="vehicle-title">
-                            <h3>${vehicle.name}</h3>
-                            <p class="vehicle-number mono">${vehicle.number}</p>
+                            <h3>${vehicle.name || ''}</h3>
+                            <p class="vehicle-number mono">${vehicle.number || ''}</p>
                         </div>
                         <div class="vehicle-info-grid">
                             <div class="vehicle-info-item">
                                 <label>年式</label>
-                                <div class="value">${vehicle.year}年</div>
+                                <div class="value">${vehicle.year || 0}年</div>
                             </div>
                             <div class="vehicle-info-item">
                                 <label>走行距離</label>
-                                <div class="value mono">${vehicle.mileage.toLocaleString()} km</div>
+                                <div class="value mono">${(vehicle.mileage || 0).toLocaleString()} km</div>
                             </div>
                             <div class="vehicle-info-item">
                                 <label>車検満了</label>
-                                <div class="value">${vehicle.inspectionDate}</div>
+                                <div class="value">${vehicle.inspectionDate || ''}</div>
                             </div>
                             <div class="vehicle-info-item">
                                 <label>修繕費合計</label>
-                                <div class="value mono">¥${totalRepairCost.toLocaleString()}</div>
+                                <div class="value mono">¥${(totalRepairCost || 0).toLocaleString()}</div>
                             </div>
                         </div>
                         <div class="vehicle-footer">
@@ -2461,8 +2461,8 @@
             const vehicleAccidents = state.accidents.filter(a => a.vehicleId === vehicle.id);
             const vehicleDocuments = state.documents.filter(d => d.vehicleId === vehicle.id);
 
-            const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + r.cost, 0);
-            const totalFuelCost = vehicleFuel.reduce((sum, f) => sum + f.cost, 0);
+            const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
+            const totalFuelCost = vehicleFuel.reduce((sum, f) => sum + (f.cost || 0), 0);
             const totalCost = (vehicle.purchasePrice || 0) + totalRepairCost + totalFuelCost;
 
             return `
@@ -2509,11 +2509,11 @@
                         <div class="detail-info-grid">
                             <div class="detail-info-item">
                                 <label>年式</label>
-                                <div class="value">${vehicle.year}年</div>
+                                <div class="value">${vehicle.year || 0}年</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>走行距離</label>
-                                <div class="value mono">${vehicle.mileage.toLocaleString()} km</div>
+                                <div class="value mono">${(vehicle.mileage || 0).toLocaleString()} km</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>購入価格</label>
@@ -2521,15 +2521,15 @@
                             </div>
                             <div class="detail-info-item">
                                 <label>総維持費</label>
-                                <div class="value mono">¥${totalCost.toLocaleString()}</div>
+                                <div class="value mono">¥${(totalCost || 0).toLocaleString()}</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>車検満了日</label>
-                                <div class="value" style="font-size: 16px;">${vehicle.inspectionDate}</div>
+                                <div class="value" style="font-size: 16px;">${vehicle.inspectionDate || ''}</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>保険満了日</label>
-                                <div class="value" style="font-size: 16px;">${vehicle.insuranceDate}</div>
+                                <div class="value" style="font-size: 16px;">${vehicle.insuranceDate || ''}</div>
                             </div>
                         </div>
                     </div>
@@ -2574,27 +2574,27 @@
                         <div class="detail-info-grid" style="margin-bottom: 32px;">
                             <div class="detail-info-item">
                                 <label>車両番号</label>
-                                <div class="value mono" style="font-size: 16px;">${vehicle.number}</div>
+                                <div class="value mono" style="font-size: 16px;">${vehicle.number || ''}</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>車種名</label>
-                                <div class="value" style="font-size: 16px;">${vehicle.name}</div>
+                                <div class="value" style="font-size: 16px;">${vehicle.name || ''}</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>年式</label>
-                                <div class="value">${vehicle.year}年</div>
+                                <div class="value">${vehicle.year || 0}年</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>現在の走行距離</label>
-                                <div class="value mono">${vehicle.mileage.toLocaleString()} km</div>
+                                <div class="value mono">${(vehicle.mileage || 0).toLocaleString()} km</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>車検満了日</label>
-                                <div class="value" style="font-size: 16px;">${vehicle.inspectionDate}</div>
+                                <div class="value" style="font-size: 16px;">${vehicle.inspectionDate || ''}</div>
                             </div>
                             <div class="detail-info-item">
                                 <label>保険満了日</label>
-                                <div class="value" style="font-size: 16px;">${vehicle.insuranceDate}</div>
+                                <div class="value" style="font-size: 16px;">${vehicle.insuranceDate || ''}</div>
                             </div>
                         </div>
                         
@@ -2746,7 +2746,7 @@
                                 <div class="record-grid">
                                     <div class="record-item">
                                         <label>費用</label>
-                                        <div class="value mono">¥${repair.cost.toLocaleString()}</div>
+                                        <div class="value mono">¥${(repair.cost || 0).toLocaleString()}</div>
                                     </div>
                                     <div class="record-item">
                                         <label>工場名</label>
@@ -2804,11 +2804,11 @@
                                     </div>
                                     <div class="record-item">
                                         <label>費用</label>
-                                        <div class="value mono">¥${f.cost.toLocaleString()}</div>
+                                        <div class="value mono">¥${(f.cost || 0).toLocaleString()}</div>
                                     </div>
                                     <div class="record-item">
                                         <label>走行距離</label>
-                                        <div class="value mono">${f.mileage.toLocaleString()} km</div>
+                                        <div class="value mono">${(f.mileage || 0).toLocaleString()} km</div>
                                     </div>
                                     <div class="record-item">
                                         <label>燃費</label>
@@ -2860,7 +2860,7 @@
                                     </div>
                                     <div class="record-item">
                                         <label>修理費</label>
-                                        <div class="value mono">¥${accident.repairCost.toLocaleString()}</div>
+                                        <div class="value mono">¥${(accident.repairCost || 0).toLocaleString()}</div>
                                     </div>
                                     ${accident.description ? `
                                         <div class="record-item" style="grid-column: 1 / -1;">
@@ -2909,7 +2909,7 @@
                                     </div>
                                     <div class="record-item">
                                         <label>年間保険料</label>
-                                        <div class="value mono">¥${ins.annualCost.toLocaleString()}</div>
+                                        <div class="value mono">¥${(ins.annualCost || 0).toLocaleString()}</div>
                                     </div>
                                     <div class="record-item">
                                         <label>契約タイプ</label>
