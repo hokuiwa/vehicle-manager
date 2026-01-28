@@ -837,10 +837,21 @@
                 vehicleData.editedBy = state.currentUser;
                 vehicleData.editedAt = new Date().toISOString();
                 
+                // 画像がある場合はimageとして送信（GASでドライブに保存される）
+                if (uploadedImage) {
+                    vehicleData.image = uploadedImage;
+                    console.log('📷 画像を送信:', Math.round(uploadedImage.length / 1024), 'KB');
+                }
+                
                 const existingIndex = state.vehicles.findIndex(v => v.id === vehicleData.id);
                 const action = existingIndex >= 0 ? 'update' : 'add';
                 
                 await gasPost(action, 'vehicles', vehicleData);
+                
+                // 保存後、imageUrlが返ってくるのでそれを使用
+                if (vehicleData.image) {
+                    delete vehicleData.image; // Base64データは削除
+                }
                 
                 if (action === 'update') {
                     state.vehicles[existingIndex] = vehicleData;
@@ -1979,13 +1990,13 @@
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 24px; margin-bottom: 32px;">
                     <div style="background: white; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-                        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">月別修繕費推移</h3>
+                        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">月別トータルコスト（燃料費 + 修繕費）</h3>
                         <div style="height: 300px;">
                             <canvas id="repairCostChart"></canvas>
                         </div>
                     </div>
                     <div style="background: white; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-                        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">燃費推移</h3>
+                        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">1kmあたりの維持費推移</h3>
                         <div style="height: 300px;">
                             <canvas id="fuelEfficiencyChart"></canvas>
                         </div>
@@ -2082,10 +2093,13 @@
             const vehicleRepairs = state.repairs.filter(r => r.vehicleId === vehicle.id);
             const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
 
+            // imageUrlまたはimageを使用
+            const imageSource = vehicle.imageUrl || vehicle.image;
+
             return `
                 <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
                     <div class="vehicle-image">
-                        ${vehicle.image ? `<img src="${vehicle.image}" alt="${vehicle.name}">` : '<div class="vehicle-image-placeholder">🚗</div>'}
+                        ${imageSource ? `<img src="${imageSource}" alt="${vehicle.name}">` : '<div class="vehicle-image-placeholder">🚗</div>'}
                         ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
                     </div>
                     <div class="vehicle-content">
@@ -2236,7 +2250,9 @@
         }
 
         function renderRepairsTab() {
-            const repairs = state.repairs.filter(r => r.vehicleId === state.selectedVehicle.id);
+            const repairs = state.repairs
+                .filter(r => r.vehicleId === state.selectedVehicle.id)
+                .sort((a, b) => new Date(formatDate(b.date)) - new Date(formatDate(a.date))); // 新しい順
             
             return `
                 <div>
@@ -2264,7 +2280,9 @@
         }
 
         function renderFuelTab() {
-            const fuel = state.fuelRecords.filter(f => f.vehicleId === state.selectedVehicle.id);
+            const fuel = state.fuelRecords
+                .filter(f => f.vehicleId === state.selectedVehicle.id)
+                .sort((a, b) => new Date(formatDate(b.date)) - new Date(formatDate(a.date))); // 新しい順
             
             return `
                 <div>
@@ -2291,7 +2309,9 @@
         }
 
         function renderAccidentsTab() {
-            const accidents = state.accidents.filter(a => a.vehicleId === state.selectedVehicle.id);
+            const accidents = state.accidents
+                .filter(a => a.vehicleId === state.selectedVehicle.id)
+                .sort((a, b) => new Date(formatDate(b.date)) - new Date(formatDate(a.date))); // 新しい順
             
             return `
                 <div>
@@ -2322,7 +2342,9 @@
         }
 
         function renderInsuranceTab() {
-            const insurances = state.insurances.filter(i => i.vehicleId === state.selectedVehicle.id);
+            const insurances = state.insurances
+                .filter(i => i.vehicleId === state.selectedVehicle.id)
+                .sort((a, b) => new Date(formatDate(b.startDate)) - new Date(formatDate(a.startDate))); // 新しい順
             
             return `
                 <div>
@@ -2353,7 +2375,9 @@
         }
 
         function renderMaintenanceTab() {
-            const maintenances = state.maintenanceRecords.filter(m => m.vehicleId === state.selectedVehicle.id);
+            const maintenances = state.maintenanceRecords
+                .filter(m => m.vehicleId === state.selectedVehicle.id)
+                .sort((a, b) => new Date(formatDate(b.date)) - new Date(formatDate(a.date))); // 新しい順
             
             return `
                 <div>
@@ -2726,11 +2750,11 @@
                                 </div>
                                 <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
                                     <div style="font-weight: 600;">ロードサービス（JAF）</div>
-                                    <div style="font-size: 18px; font-weight: 700; margin-top: 4px;">0120-365-110</div>
+                                    <div style="font-size: 18px; font-weight: 700; margin-top: 4px;">0570-00-8139</div>
                                 </div>
                                 <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
-                                    <div style="font-weight: 600;">北清いわみざわ 連絡先</div>
-                                    <div style="font-size: 18px; font-weight: 700; margin-top: 4px;">0126-35-5228</div>
+                                    <div style="font-weight: 600;">会社連絡先</div>
+                                    <div style="font-size: 18px; font-weight: 700; margin-top: 4px;">XXX-XXX-XXXX</div>
                                     <div style="font-size: 12px; color: #64748b; margin-top: 4px;">※実際の番号に変更してください</div>
                                 </div>
                             </div>
@@ -2758,39 +2782,69 @@
                 repairChart.destroy();
             }
             
-            // 月別修繕費を集計
+            // 月別に燃料費と修繕費を集計
             const monthlyData = {};
+            
+            // 修繕費を集計
             state.repairs.forEach(r => {
                 const date = new Date(formatDate(r.date));
                 const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                monthlyData[monthKey] = (monthlyData[monthKey] || 0) + (r.cost || 0);
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { fuel: 0, repair: 0 };
+                }
+                monthlyData[monthKey].repair += (r.cost || 0);
+            });
+            
+            // 燃料費を集計
+            state.fuelRecords.forEach(f => {
+                const date = new Date(formatDate(f.date));
+                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { fuel: 0, repair: 0 };
+                }
+                monthlyData[monthKey].fuel += (f.cost || 0);
             });
             
             const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
-            const data = sortedMonths.map(month => monthlyData[month]);
+            const fuelData = sortedMonths.map(month => monthlyData[month].fuel);
+            const repairData = sortedMonths.map(month => monthlyData[month].repair);
             
             repairChart = new Chart(canvas, {
                 type: 'bar',
                 data: {
                     labels: sortedMonths,
-                    datasets: [{
-                        label: '修繕費',
-                        data: data,
-                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
-                        borderColor: 'rgb(245, 158, 11)',
-                        borderWidth: 1
-                    }]
+                    datasets: [
+                        {
+                            label: '燃料費',
+                            data: fuelData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgb(16, 185, 129)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '修繕費',
+                            data: repairData,
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                            borderColor: 'rgb(245, 158, 11)',
+                            borderWidth: 1
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'top'
                         }
                     },
                     scales: {
+                        x: {
+                            stacked: true
+                        },
                         y: {
+                            stacked: true,
                             beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
@@ -2811,24 +2865,49 @@
                 fuelChart.destroy();
             }
             
-            const sortedFuel = [...state.fuelRecords]
-                .sort((a, b) => new Date(formatDate(a.date)) - new Date(formatDate(b.date)))
-                .slice(-20);
+            // 月別の維持費と走行距離を集計
+            const monthlyData = {};
             
-            const labels = sortedFuel.map(f => formatDate(f.date));
-            const data = sortedFuel.map(f => f.fuelEfficiency || 0);
+            // 修繕費を集計
+            state.repairs.forEach(r => {
+                const date = new Date(formatDate(r.date));
+                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { cost: 0, mileage: 0 };
+                }
+                monthlyData[monthKey].cost += (r.cost || 0);
+            });
+            
+            // 燃料費と走行距離を集計
+            state.fuelRecords.forEach(f => {
+                const date = new Date(formatDate(f.date));
+                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { cost: 0, mileage: 0 };
+                }
+                monthlyData[monthKey].cost += (f.cost || 0);
+                monthlyData[monthKey].mileage += (f.mileage || 0);
+            });
+            
+            // 1kmあたりの維持費を計算
+            const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
+            const costPerKm = sortedMonths.map(month => {
+                const data = monthlyData[month];
+                return data.mileage > 0 ? data.cost / data.mileage : 0;
+            });
             
             fuelChart = new Chart(canvas, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: sortedMonths,
                     datasets: [{
-                        label: '燃費',
-                        data: data,
-                        borderColor: 'rgb(16, 185, 129)',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        label: '1kmあたり維持費',
+                        data: costPerKm,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         tension: 0.4,
-                        fill: true
+                        fill: true,
+                        borderWidth: 2
                     }]
                 },
                 options: {
@@ -2844,7 +2923,7 @@
                             beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
-                                    return value + ' km/L';
+                                    return '¥' + value.toFixed(2);
                                 }
                             }
                         }
