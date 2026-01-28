@@ -634,6 +634,33 @@
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz_7UGxxuMIYCSifsYjgrwtX4bfxFgNcIoKI6lDosr4VCeFUE6p1DykII5-9OpuWxMy7w/exec';
 
         // ========================================
+        // GoogleドライブURL変換関数
+        // ========================================
+        function convertDriveUrl(url) {
+            if (!url) return null;
+            
+            // 既に正しい形式の場合はそのまま返す
+            if (url.includes('drive.google.com/uc?export=view')) {
+                return url;
+            }
+            
+            // /file/d/xxxxx/view 形式から ID を抽出
+            const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+            }
+            
+            // ?id=xxxxx 形式から ID を抽出
+            const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+            }
+            
+            // 変換できない場合は元のURLを返す
+            return url;
+        }
+
+        // ========================================
         // 日付フォーマット関数
         // ========================================
         function formatDate(dateStr) {
@@ -1688,16 +1715,22 @@
                     purchaseDate: formData.get('purchaseDate') || '',
                     inspectionDate: formData.get('inspectionDate') || '',
                     insuranceDate: formData.get('insuranceDate') || '',
-                    imageUrl: formData.get('imageUrl') || ''
+                    imageUrl: formData.get('imageUrl') || '',
+                    inspectionCertUrl: formData.get('inspectionCertUrl') || ''
                 };
                 
                 // GoogleドライブのURLを標準形式に変換
-                if (vehicleData.imageUrl && vehicleData.imageUrl.includes('drive.google.com')) {
-                    // https://drive.google.com/file/d/xxxxx/view → https://drive.google.com/uc?export=view&id=xxxxx
-                    const match = vehicleData.imageUrl.match(/\/d\/([^\/]+)/);
-                    if (match) {
-                        vehicleData.imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                if (vehicleData.imageUrl) {
+                    const converted = convertDriveUrl(vehicleData.imageUrl);
+                    if (converted) {
+                        vehicleData.imageUrl = converted;
+                        console.log('📷 画像URL変換:', vehicleData.imageUrl);
                     }
+                }
+                
+                // 車検証PDFのURLはそのまま保存（開く時に変換）
+                if (vehicleData.inspectionCertUrl) {
+                    console.log('📄 車検証PDF URL:', vehicleData.inspectionCertUrl);
                 }
                 
                 saveVehicle(vehicleData).finally(() => {
@@ -2107,13 +2140,14 @@
             const vehicleRepairs = state.repairs.filter(r => r.vehicleId === vehicle.id);
             const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
 
-            // imageUrlまたはimageを使用
-            const imageSource = vehicle.imageUrl || vehicle.image;
+            // imageUrlを自動変換
+            const imageSource = convertDriveUrl(vehicle.imageUrl) || convertDriveUrl(vehicle.image);
 
             return `
                 <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
                     <div class="vehicle-image">
-                        ${imageSource ? `<img src="${imageSource}" alt="${vehicle.name}">` : '<div class="vehicle-image-placeholder">🚗</div>'}
+                        ${imageSource ? `<img src="${imageSource}" alt="${vehicle.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
+                        <div class="vehicle-image-placeholder" style="${imageSource ? 'display: none;' : ''}">🚗</div>
                         ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
                     </div>
                     <div class="vehicle-content">
@@ -2242,6 +2276,38 @@
                                 <div>
                                     <label style="color: #64748b; font-size: 13px;">保険満了日</label>
                                     <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${formatDate(vehicle.insuranceDate)}</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                                <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">📄 書類・画像</h4>
+                                <div style="display: grid; gap: 16px;">
+                                    ${vehicle.imageUrl ? `
+                                        <div style="background: #f8fafc; padding: 16px; border-radius: 8px;">
+                                            <label style="color: #64748b; font-size: 13px; display: block; margin-bottom: 8px;">車両写真</label>
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <img src="${convertDriveUrl(vehicle.imageUrl)}" alt="${vehicle.name}" style="width: 120px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                <div style="display: none; width: 120px; height: 90px; background: #fee2e2; border-radius: 6px; align-items: center; justify-content: center; font-size: 32px;">❌</div>
+                                                <div>
+                                                    <a href="${convertDriveUrl(vehicle.imageUrl)}" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 14px;">📷 画像を開く</a>
+                                                    <div style="color: #64748b; font-size: 11px; margin-top: 4px; font-family: monospace; word-break: break-all;">${vehicle.imageUrl.substring(0, 40)}...</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : '<div style="background: #f8fafc; padding: 16px; border-radius: 8px; color: #64748b; font-size: 13px;">車両写真: 未登録</div>'}
+                                    
+                                    ${vehicle.inspectionCertUrl ? `
+                                        <div style="background: #f8fafc; padding: 16px; border-radius: 8px;">
+                                            <label style="color: #64748b; font-size: 13px; display: block; margin-bottom: 8px;">車検証PDF</label>
+                                            <a href="${vehicle.inspectionCertUrl}" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                    <polyline points="14 2 14 8 20 8"/>
+                                                </svg>
+                                                車検証PDFを開く
+                                            </a>
+                                        </div>
+                                    ` : '<div style="background: #f8fafc; padding: 16px; border-radius: 8px; color: #64748b; font-size: 13px;">車検証PDF: 未登録</div>'}
                                 </div>
                             </div>
                         </div>
@@ -2431,9 +2497,16 @@
                         <form class="modal-body" onsubmit="submitVehicleForm(event)">
                             <div class="form-group">
                                 <label>車両写真URL（Googleドライブ）</label>
-                                <input type="url" class="form-control" name="imageUrl" value="${vehicle && vehicle.imageUrl ? vehicle.imageUrl : ''}" placeholder="https://drive.google.com/uc?export=view&id=...">
+                                <input type="url" class="form-control" name="imageUrl" value="${vehicle && vehicle.imageUrl ? vehicle.imageUrl : ''}" placeholder="https://drive.google.com/file/d/xxxxx/view">
                                 <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
-                                    📝 Googleドライブにアップロード → 共有 → リンクをコピー → ここに貼り付け
+                                    📝 Googleドライブに画像をアップロード → 右クリック → 共有 → リンクをコピー
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>車検証PDF URL（Googleドライブ）</label>
+                                <input type="url" class="form-control" name="inspectionCertUrl" value="${vehicle && vehicle.inspectionCertUrl ? vehicle.inspectionCertUrl : ''}" placeholder="https://drive.google.com/file/d/xxxxx/view">
+                                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
+                                    📄 車検証PDFをGoogleドライブにアップロード → リンクをコピー
                                 </small>
                             </div>
                             <div class="form-group">
