@@ -693,6 +693,8 @@
                     
                     if (data) {
                         const dataJson = encodeURIComponent(JSON.stringify(data));
+                        console.log('📤 データをJSON化:', dataJson.substring(0, 200) + '...');
+                        console.log('📤 URL長:', url.length + dataJson.length);
                         url += `&data=${dataJson}`;
                     }
                     
@@ -703,11 +705,18 @@
                     const callbackName = 'jsonpCallback_' + Date.now();
                     url += `&callback=${callbackName}`;
                     
+                    console.log('📤 最終URL長:', url.length);
+                    if (url.length > 8000) {
+                        console.warn('⚠️ URL長が8000文字を超えています:', url.length);
+                    }
+                    
                     window[callbackName] = function(result) {
+                        console.log('📥 GAS応答受信:', result);
                         delete window[callbackName];
                         document.body.removeChild(script);
                         
                         if (!result.success) {
+                            console.error('❌ GASエラー:', result.error);
                             reject(new Error(result.error || 'API error'));
                         } else {
                             resolve(result);
@@ -716,12 +725,15 @@
                     
                     const script = document.createElement('script');
                     script.src = url;
-                    script.onerror = function() {
+                    script.onerror = function(error) {
+                        console.error('❌ スクリプト読み込みエラー:', error);
+                        console.error('❌ URL:', url.substring(0, 200) + '...');
                         delete window[callbackName];
                         document.body.removeChild(script);
-                        reject(new Error('Failed to save data'));
+                        reject(new Error('Failed to save data - script load error'));
                     };
                     
+                    console.log('📤 スクリプトタグ追加');
                     document.body.appendChild(script);
                 } catch (error) {
                     console.error('❌ GAS POST error:', error);
@@ -837,21 +849,12 @@
                 vehicleData.editedBy = state.currentUser;
                 vehicleData.editedAt = new Date().toISOString();
                 
-                // 画像がある場合はimageとして送信（GASでドライブに保存される）
-                if (uploadedImage) {
-                    vehicleData.image = uploadedImage;
-                    console.log('📷 画像を送信:', Math.round(uploadedImage.length / 1024), 'KB');
-                }
-                
                 const existingIndex = state.vehicles.findIndex(v => v.id === vehicleData.id);
                 const action = existingIndex >= 0 ? 'update' : 'add';
                 
-                await gasPost(action, 'vehicles', vehicleData);
-                
-                // 保存後、imageUrlが返ってくるのでそれを使用
-                if (vehicleData.image) {
-                    delete vehicleData.image; // Base64データは削除
-                }
+                console.log('📤 GASに送信:', action);
+                const result = await gasPost(action, 'vehicles', vehicleData);
+                console.log('📥 GASからの応答:', result);
                 
                 if (action === 'update') {
                     state.vehicles[existingIndex] = vehicleData;
@@ -869,6 +872,8 @@
                 render();
             } catch (error) {
                 console.error('❌ 車両保存エラー:', error);
+                console.error('❌ エラー詳細:', error.message);
+                console.error('❌ エラースタック:', error.stack);
                 alert('保存に失敗しました: ' + error.message);
                 isSubmitting = false;
                 hideLoading();
@@ -1683,8 +1688,17 @@
                     purchaseDate: formData.get('purchaseDate') || '',
                     inspectionDate: formData.get('inspectionDate') || '',
                     insuranceDate: formData.get('insuranceDate') || '',
-                    image: uploadedImage || state.selectedVehicle?.image || null
+                    imageUrl: formData.get('imageUrl') || ''
                 };
+                
+                // GoogleドライブのURLを標準形式に変換
+                if (vehicleData.imageUrl && vehicleData.imageUrl.includes('drive.google.com')) {
+                    // https://drive.google.com/file/d/xxxxx/view → https://drive.google.com/uc?export=view&id=xxxxx
+                    const match = vehicleData.imageUrl.match(/\/d\/([^\/]+)/);
+                    if (match) {
+                        vehicleData.imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                    }
+                }
                 
                 saveVehicle(vehicleData).finally(() => {
                     isSubmitting = false;
@@ -2416,9 +2430,11 @@
                         </div>
                         <form class="modal-body" onsubmit="submitVehicleForm(event)">
                             <div class="form-group">
-                                <label>車両写真</label>
-                                <input type="file" accept="image/*" onchange="handleImageUpload(event)">
-                                <div id="image-preview"></div>
+                                <label>車両写真URL（Googleドライブ）</label>
+                                <input type="url" class="form-control" name="imageUrl" value="${vehicle && vehicle.imageUrl ? vehicle.imageUrl : ''}" placeholder="https://drive.google.com/uc?export=view&id=...">
+                                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
+                                    📝 Googleドライブにアップロード → 共有 → リンクをコピー → ここに貼り付け
+                                </small>
                             </div>
                             <div class="form-group">
                                 <label>車両番号</label>
