@@ -741,6 +741,7 @@
             documents: [],
             insurances: [],
             inspectionCerts: [],
+            maintenanceRecords: [],
             selectedVehicle: null,
             activeView: 'dashboard',
             activeTab: 'basic',
@@ -751,6 +752,7 @@
             showAddAccident: false,
             showAddDocument: false,
             showAddInsurance: false,
+            showAddMaintenance: false,
             showEmergencyModal: false,
             showNotifications: false,
             editingRepair: null,
@@ -758,6 +760,7 @@
             editingAccident: null,
             editingDocument: null,
             editingInsurance: null,
+            editingMaintenance: null,
             currentUser: 'ユーザー'
         };
 
@@ -802,6 +805,7 @@
                 state.documents = allData.documents || [];
                 state.insurances = allData.insurances || [];
                 state.inspectionCerts = allData.inspectionCerts || [];
+                state.maintenanceRecords = allData.maintenanceRecords || [];
                 
                 console.log('✅ データ読み込み完了:', {
                     vehicles: state.vehicles.length,
@@ -972,6 +976,34 @@
             }
         }
 
+        async function saveMaintenance(maintenanceData) {
+            try {
+                showLoading('保存しています...');
+                maintenanceData.vehicleId = state.selectedVehicle.id;
+                
+                const existingIndex = state.maintenanceRecords.findIndex(m => m.id === maintenanceData.id);
+                const action = existingIndex >= 0 ? 'update' : 'add';
+                
+                await gasPost(action, 'maintenanceRecords', maintenanceData);
+                
+                if (action === 'update') {
+                    state.maintenanceRecords[existingIndex] = maintenanceData;
+                } else {
+                    state.maintenanceRecords.push(maintenanceData);
+                }
+                
+                state.showAddMaintenance = false;
+                state.editingMaintenance = null;
+                
+                hideLoading();
+                render();
+            } catch (error) {
+                console.error('❌ メンテナンス保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+                hideLoading();
+            }
+        }
+
         // ========================================
         // データ削除
         // ========================================
@@ -1047,6 +1079,20 @@
                 showLoading('削除しています...');
                 await gasPost('delete', 'insurances', null, id);
                 state.insurances = state.insurances.filter(i => i.id !== id);
+                hideLoading();
+                render();
+            } catch (error) {
+                alert('削除に失敗しました: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        async function deleteMaintenance(id) {
+            if (!confirm('このメンテナンス記録を削除してもよろしいですか？')) return;
+            try {
+                showLoading('削除しています...');
+                await gasPost('delete', 'maintenanceRecords', null, id);
+                state.maintenanceRecords = state.maintenanceRecords.filter(m => m.id !== id);
                 hideLoading();
                 render();
             } catch (error) {
@@ -1507,6 +1553,24 @@
             render();
         }
 
+        function openAddMaintenance() {
+            state.editingMaintenance = null;
+            state.showAddMaintenance = true;
+            render();
+        }
+
+        function editMaintenance(id) {
+            state.editingMaintenance = state.maintenanceRecords.find(m => m.id === id);
+            state.showAddMaintenance = true;
+            render();
+        }
+
+        function closeMaintenanceForm() {
+            state.showAddMaintenance = false;
+            state.editingMaintenance = null;
+            render();
+        }
+
         function switchTab(tab) {
             state.activeTab = tab;
             render();
@@ -1529,6 +1593,7 @@
                 state.showAddFuel = false;
                 state.showAddAccident = false;
                 state.showAddInsurance = false;
+                state.showAddMaintenance = false;
                 state.showEmergencyModal = false;
                 render();
             }
@@ -1543,8 +1608,8 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 500;
-                    const MAX_HEIGHT = 400;
+                    const MAX_WIDTH = 400;
+                    const MAX_HEIGHT = 300;
                     
                     let width = img.width;
                     let height = img.height;
@@ -1567,8 +1632,8 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // 品質30%
-                    uploadedImage = canvas.toDataURL('image/jpeg', 0.3);
+                    // 品質20%（最強圧縮）
+                    uploadedImage = canvas.toDataURL('image/jpeg', 0.2);
                     
                     const preview = document.getElementById('image-preview');
                     if (preview) {
@@ -1694,6 +1759,25 @@
             }
         }
 
+        function submitMaintenanceForm(event) {
+            event.preventDefault();
+            try {
+                const formData = new FormData(event.target);
+                const maintenanceData = {
+                    id: formData.get('id') || `m${Date.now()}`,
+                    date: formData.get('date') || '',
+                    type: formData.get('type') || '',
+                    description: formData.get('description') || '',
+                    cost: parseInt(formData.get('cost')) || 0,
+                    nextDate: formData.get('nextDate') || '',
+                    notes: formData.get('notes') || ''
+                };
+                saveMaintenance(maintenanceData);
+            } catch (error) {
+                alert('送信エラー: ' + error.message);
+            }
+        }
+
         // ========================================
         // 計算関数
         // ========================================
@@ -1764,9 +1848,18 @@
                     ${state.showAddFuel ? renderFuelForm() : ''}
                     ${state.showAddAccident ? renderAccidentForm() : ''}
                     ${state.showAddInsurance ? renderInsuranceForm() : ''}
+                    ${state.showAddMaintenance ? renderMaintenanceForm() : ''}
                     ${state.showEmergencyModal ? renderEmergencyModal() : ''}
                     ${state.showNotifications ? renderNotifications() : ''}
                 `;
+                
+                // ダッシュボード表示時にグラフを描画
+                if (state.activeView === 'dashboard') {
+                    setTimeout(() => {
+                        createRepairCostChart();
+                        createFuelEfficiencyChart();
+                    }, 100);
+                }
             } catch (error) {
                 console.error('❌ レンダリングエラー:', error);
                 const app = document.getElementById('app');
@@ -1883,6 +1976,21 @@
 
             return `
                 ${renderStats(costs)}
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 24px; margin-bottom: 32px;">
+                    <div style="background: white; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">月別修繕費推移</h3>
+                        <div style="height: 300px;">
+                            <canvas id="repairCostChart"></canvas>
+                        </div>
+                    </div>
+                    <div style="background: white; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">燃費推移</h3>
+                        <div style="height: 300px;">
+                            <canvas id="fuelEfficiencyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="vehicles-header">
                     <h2>車両一覧 (${filteredVehicles.length}台)</h2>
@@ -2111,7 +2219,7 @@
                         </div>
                     `;
                 case 'maintenance':
-                    return `<div style="padding: 40px; text-align: center; color: #64748b;"><p>メンテナンス記録機能は準備中です</p></div>`;
+                    return renderMaintenanceTab();
                 case 'repairs':
                     return renderRepairsTab();
                 case 'fuel':
@@ -2239,6 +2347,35 @@
                                 </div>
                             </div>
                         `).join('') : '<div class="empty-state"><div class="empty-state-icon">🛡️</div><p>保険情報がありません</p></div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMaintenanceTab() {
+            const maintenances = state.maintenanceRecords.filter(m => m.vehicleId === state.selectedVehicle.id);
+            
+            return `
+                <div>
+                    <button class="btn-primary" onclick="openAddMaintenance()">+ メンテナンス記録を追加</button>
+                    <div style="margin-top: 24px;">
+                        ${maintenances.length > 0 ? maintenances.map(m => `
+                            <div class="record-item">
+                                <div class="record-header">
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 16px;">${m.type}</div>
+                                        <div style="color: #64748b; font-size: 13px; margin-top: 4px;">${formatDate(m.date)}</div>
+                                        ${m.description ? `<div style="color: #64748b; font-size: 13px; margin-top: 8px;">${m.description}</div>` : ''}
+                                        ${m.nextDate ? `<div style="color: #64748b; font-size: 13px; margin-top: 4px;">次回: ${formatDate(m.nextDate)}</div>` : ''}
+                                    </div>
+                                    <div class="record-actions">
+                                        <button class="btn-secondary" onclick="editMaintenance('${m.id}')">編集</button>
+                                        <button class="btn-secondary" onclick="deleteMaintenance('${m.id}')" style="color: #dc2626;">削除</button>
+                                    </div>
+                                </div>
+                                <div style="font-weight: 700; font-size: 18px; margin-top: 12px;">¥${(m.cost || 0).toLocaleString()}</div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>メンテナンス記録がありません</p></div>'}
                     </div>
                 </div>
             `;
@@ -2495,6 +2632,65 @@
             `;
         }
 
+        function renderMaintenanceForm() {
+            const maintenance = state.editingMaintenance;
+            const isEditing = maintenance !== null;
+            
+            return `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2>${isEditing ? 'メンテナンス記録を編集' : 'メンテナンス記録を追加'}</h2>
+                            <button class="close-btn" onclick="closeMaintenanceForm()">✕</button>
+                        </div>
+                        <form class="modal-body" onsubmit="submitMaintenanceForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${maintenance.id}">` : ''}
+                            <div class="form-group">
+                                <label>メンテナンス種類</label>
+                                <select class="form-control" name="type" required>
+                                    <option value="">選択してください</option>
+                                    <option value="オイル交換" ${isEditing && maintenance.type === 'オイル交換' ? 'selected' : ''}>オイル交換</option>
+                                    <option value="タイヤ交換" ${isEditing && maintenance.type === 'タイヤ交換' ? 'selected' : ''}>タイヤ交換</option>
+                                    <option value="タイヤローテーション" ${isEditing && maintenance.type === 'タイヤローテーション' ? 'selected' : ''}>タイヤローテーション</option>
+                                    <option value="エアフィルター交換" ${isEditing && maintenance.type === 'エアフィルター交換' ? 'selected' : ''}>エアフィルター交換</option>
+                                    <option value="ブレーキパッド交換" ${isEditing && maintenance.type === 'ブレーキパッド交換' ? 'selected' : ''}>ブレーキパッド交換</option>
+                                    <option value="バッテリー交換" ${isEditing && maintenance.type === 'バッテリー交換' ? 'selected' : ''}>バッテリー交換</option>
+                                    <option value="定期点検" ${isEditing && maintenance.type === '定期点検' ? 'selected' : ''}>定期点検</option>
+                                    <option value="その他" ${isEditing && maintenance.type === 'その他' ? 'selected' : ''}>その他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>実施日</label>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? formatDate(maintenance.date) : new Date().toISOString().split('T')[0]}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>詳細</label>
+                                <textarea class="form-control" name="description">${isEditing ? maintenance.description : ''}</textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>費用 (円)</label>
+                                    <input type="number" class="form-control" name="cost" value="${isEditing ? maintenance.cost : 0}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>次回実施予定日</label>
+                                    <input type="date" class="form-control" name="nextDate" value="${isEditing && maintenance.nextDate ? formatDate(maintenance.nextDate) : ''}">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>備考</label>
+                                <textarea class="form-control" name="notes">${isEditing && maintenance.notes ? maintenance.notes : ''}</textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" onclick="closeMaintenanceForm()">キャンセル</button>
+                                <button type="submit" class="btn-primary">保存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderEmergencyModal() {
             return `
                 <div class="modal-overlay" onclick="closeModal(event)">
@@ -2545,6 +2741,116 @@
                     </div>
                 </div>
             `;
+        }
+
+        // ========================================
+        // グラフ描画関数
+        // ========================================
+        let repairChart = null;
+        let fuelChart = null;
+
+        function createRepairCostChart() {
+            const canvas = document.getElementById('repairCostChart');
+            if (!canvas) return;
+            
+            // 既存のチャートを破棄
+            if (repairChart) {
+                repairChart.destroy();
+            }
+            
+            // 月別修繕費を集計
+            const monthlyData = {};
+            state.repairs.forEach(r => {
+                const date = new Date(formatDate(r.date));
+                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                monthlyData[monthKey] = (monthlyData[monthKey] || 0) + (r.cost || 0);
+            });
+            
+            const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
+            const data = sortedMonths.map(month => monthlyData[month]);
+            
+            repairChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: sortedMonths,
+                    datasets: [{
+                        label: '修繕費',
+                        data: data,
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        borderColor: 'rgb(245, 158, 11)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createFuelEfficiencyChart() {
+            const canvas = document.getElementById('fuelEfficiencyChart');
+            if (!canvas) return;
+            
+            if (fuelChart) {
+                fuelChart.destroy();
+            }
+            
+            const sortedFuel = [...state.fuelRecords]
+                .sort((a, b) => new Date(formatDate(a.date)) - new Date(formatDate(b.date)))
+                .slice(-20);
+            
+            const labels = sortedFuel.map(f => formatDate(f.date));
+            const data = sortedFuel.map(f => f.fuelEfficiency || 0);
+            
+            fuelChart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '燃費',
+                        data: data,
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' km/L';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // ========================================
