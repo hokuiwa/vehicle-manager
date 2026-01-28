@@ -476,6 +476,7 @@
             cursor: pointer;
             color: #64748b;
             padding: 4px;
+            font-size: 24px;
         }
 
         .close-btn:hover {
@@ -631,6 +632,20 @@
         // GAS API設定
         // ========================================
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz_7UGxxuMIYCSifsYjgrwtX4bfxFgNcIoKI6lDosr4VCeFUE6p1DykII5-9OpuWxMy7w/exec';
+
+        // ========================================
+        // 日付フォーマット関数
+        // ========================================
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            
+            // ISO形式（2026-03-25T15:00:00.000Z）をYYYY-MM-DDに変換
+            if (dateStr.includes('T')) {
+                return dateStr.split('T')[0];
+            }
+            
+            return dateStr;
+        }
 
         // ========================================
         // API通信関数（JSONP版）
@@ -804,7 +819,7 @@
         }
 
         // ========================================
-        // データ保存（車両）
+        // データ保存
         // ========================================
         async function saveVehicle(vehicleData) {
             try {
@@ -845,14 +860,9 @@
             }
         }
 
-        // ========================================
-        // データ保存（修繕）
-        // ========================================
         async function saveRepair(repairData) {
             try {
-                console.log('🔧 修繕保存開始:', repairData);
                 showLoading('保存しています...');
-                
                 repairData.vehicleId = state.selectedVehicle.id;
                 
                 const existingIndex = state.repairs.findIndex(r => r.id === repairData.id);
@@ -866,8 +876,6 @@
                     state.repairs.push(repairData);
                 }
                 
-                console.log('✅ 修繕保存完了');
-                
                 state.showAddRepair = false;
                 state.editingRepair = null;
                 
@@ -880,14 +888,9 @@
             }
         }
 
-        // ========================================
-        // データ保存（燃料）
-        // ========================================
         async function saveFuel(fuelData) {
             try {
-                console.log('⛽ 燃料保存開始:', fuelData);
                 showLoading('保存しています...');
-                
                 fuelData.vehicleId = state.selectedVehicle.id;
                 
                 const existingIndex = state.fuelRecords.findIndex(f => f.id === fuelData.id);
@@ -901,8 +904,6 @@
                     state.fuelRecords.push(fuelData);
                 }
                 
-                console.log('✅ 燃料保存完了');
-                
                 state.showAddFuel = false;
                 state.editingFuel = null;
                 
@@ -910,6 +911,62 @@
                 render();
             } catch (error) {
                 console.error('❌ 燃料保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        async function saveAccident(accidentData) {
+            try {
+                showLoading('保存しています...');
+                accidentData.vehicleId = state.selectedVehicle.id;
+                
+                const existingIndex = state.accidents.findIndex(a => a.id === accidentData.id);
+                const action = existingIndex >= 0 ? 'update' : 'add';
+                
+                await gasPost(action, 'accidents', accidentData);
+                
+                if (action === 'update') {
+                    state.accidents[existingIndex] = accidentData;
+                } else {
+                    state.accidents.push(accidentData);
+                }
+                
+                state.showAddAccident = false;
+                state.editingAccident = null;
+                
+                hideLoading();
+                render();
+            } catch (error) {
+                console.error('❌ 事故保存エラー:', error);
+                alert('保存に失敗しました: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        async function saveInsurance(insuranceData) {
+            try {
+                showLoading('保存しています...');
+                insuranceData.vehicleId = state.selectedVehicle.id;
+                
+                const existingIndex = state.insurances.findIndex(i => i.id === insuranceData.id);
+                const action = existingIndex >= 0 ? 'update' : 'add';
+                
+                await gasPost(action, 'insurances', insuranceData);
+                
+                if (action === 'update') {
+                    state.insurances[existingIndex] = insuranceData;
+                } else {
+                    state.insurances.push(insuranceData);
+                }
+                
+                state.showAddInsurance = false;
+                state.editingInsurance = null;
+                
+                hideLoading();
+                render();
+            } catch (error) {
+                console.error('❌ 保険保存エラー:', error);
                 alert('保存に失敗しました: ' + error.message);
                 hideLoading();
             }
@@ -923,7 +980,6 @@
             
             try {
                 showLoading('削除しています...');
-                
                 await gasPost('delete', 'vehicles', null, id);
                 
                 state.vehicles = state.vehicles.filter(v => v.id !== id);
@@ -945,7 +1001,6 @@
 
         async function deleteRepair(id) {
             if (!confirm('この修繕記録を削除してもよろしいですか？')) return;
-            
             try {
                 showLoading('削除しています...');
                 await gasPost('delete', 'repairs', null, id);
@@ -953,7 +1008,6 @@
                 hideLoading();
                 render();
             } catch (error) {
-                console.error('❌ 削除エラー:', error);
                 alert('削除に失敗しました: ' + error.message);
                 hideLoading();
             }
@@ -961,7 +1015,6 @@
 
         async function deleteFuel(id) {
             if (!confirm('この燃料記録を削除してもよろしいですか？')) return;
-            
             try {
                 showLoading('削除しています...');
                 await gasPost('delete', 'fuel', null, id);
@@ -969,7 +1022,34 @@
                 hideLoading();
                 render();
             } catch (error) {
-                console.error('❌ 削除エラー:', error);
+                alert('削除に失敗しました: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        async function deleteAccident(id) {
+            if (!confirm('この事故記録を削除してもよろしいですか？')) return;
+            try {
+                showLoading('削除しています...');
+                await gasPost('delete', 'accidents', null, id);
+                state.accidents = state.accidents.filter(a => a.id !== id);
+                hideLoading();
+                render();
+            } catch (error) {
+                alert('削除に失敗しました: ' + error.message);
+                hideLoading();
+            }
+        }
+
+        async function deleteInsurance(id) {
+            if (!confirm('この保険記録を削除してもよろしいですか？')) return;
+            try {
+                showLoading('削除しています...');
+                await gasPost('delete', 'insurances', null, id);
+                state.insurances = state.insurances.filter(i => i.id !== id);
+                hideLoading();
+                render();
+            } catch (error) {
                 alert('削除に失敗しました: ' + error.message);
                 hideLoading();
             }
@@ -983,9 +1063,8 @@
             const today = new Date();
             
             state.vehicles.forEach(vehicle => {
-                // 車検期限チェック
                 if (vehicle.inspectionDate) {
-                    const inspectionDate = new Date(vehicle.inspectionDate);
+                    const inspectionDate = new Date(formatDate(vehicle.inspectionDate));
                     const daysUntil = Math.ceil((inspectionDate - today) / (24 * 60 * 60 * 1000));
                     
                     if (daysUntil <= 30 && daysUntil > 0) {
@@ -1005,9 +1084,8 @@
                     }
                 }
                 
-                // 保険期限チェック
                 if (vehicle.insuranceDate) {
-                    const insuranceDate = new Date(vehicle.insuranceDate);
+                    const insuranceDate = new Date(formatDate(vehicle.insuranceDate));
                     const daysUntil = Math.ceil((insuranceDate - today) / (24 * 60 * 60 * 1000));
                     
                     if (daysUntil <= 30 && daysUntil > 0) {
@@ -1037,7 +1115,7 @@
         }
 
         // ========================================
-        // CSV エクスポート
+        // CSV関数（省略 - 前のコードと同じ）
         // ========================================
         function exportAllDataCSV() {
             try {
@@ -1046,21 +1124,21 @@
                 csvContent += "=== 車両情報 ===\n";
                 csvContent += "車両番号,車両名,年式,走行距離,購入金額,購入日,車検日,保険更新日\n";
                 state.vehicles.forEach(v => {
-                    csvContent += `${v.number || ''},${v.name || ''},${v.year || 0},${v.mileage || 0},${v.purchasePrice || 0},${v.purchaseDate || ''},${v.inspectionDate || ''},${v.insuranceDate || ''}\n`;
+                    csvContent += `${v.number || ''},${v.name || ''},${v.year || 0},${v.mileage || 0},${v.purchasePrice || 0},${formatDate(v.purchaseDate) || ''},${formatDate(v.inspectionDate) || ''},${formatDate(v.insuranceDate) || ''}\n`;
                 });
                 
                 csvContent += "\n=== 修繕記録 ===\n";
                 csvContent += "車両番号,日付,作業内容,費用,工場名,備考\n";
                 state.repairs.forEach(r => {
                     const vehicle = state.vehicles.find(v => v.id === r.vehicleId);
-                    csvContent += `${vehicle?.number || ''},${r.date || ''},${r.type || ''},${r.cost || 0},${r.garage || ''},"${(r.notes || '').replace(/"/g, '""')}"\n`;
+                    csvContent += `${vehicle?.number || ''},${formatDate(r.date) || ''},${r.type || ''},${r.cost || 0},${r.garage || ''},"${(r.notes || '').replace(/"/g, '""')}"\n`;
                 });
                 
                 csvContent += "\n=== 燃料記録 ===\n";
                 csvContent += "車両番号,日付,給油量,費用,走行距離,燃費\n";
                 state.fuelRecords.forEach(f => {
                     const vehicle = state.vehicles.find(v => v.id === f.vehicleId);
-                    csvContent += `${vehicle?.number || ''},${f.date || ''},${f.liters || 0},${f.cost || 0},${f.mileage || 0},${f.fuelEfficiency || 0}\n`;
+                    csvContent += `${vehicle?.number || ''},${formatDate(f.date) || ''},${f.liters || 0},${f.cost || 0},${f.mileage || 0},${f.fuelEfficiency || 0}\n`;
                 });
                 
                 const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
@@ -1082,9 +1160,6 @@
             }
         }
 
-        // ========================================
-        // CSV インポート（略 - 前のコードと同じ）
-        // ========================================
         function showImportMenu() {
             const menu = `インポートするデータを選択してください:
 
@@ -1102,8 +1177,6 @@
                 importFuelCSV();
             } else if (choice === '3') {
                 importRepairsCSV();
-            } else if (choice !== null) {
-                alert('❌ 無効な選択です。1、2、または3を入力してください。');
             }
         }
 
@@ -1134,9 +1207,7 @@
                                 continue;
                             }
                             
-                            if (line.startsWith('===') && inVehicleSection) {
-                                break;
-                            }
+                            if (line.startsWith('===') && inVehicleSection) break;
                             
                             if (inVehicleSection && line) {
                                 const delimiter = line.includes('\t') ? '\t' : ',';
@@ -1168,7 +1239,6 @@
                         alert(`✅ ${importCount}台の車両をインポートしました！`);
                         render();
                     } catch (error) {
-                        console.error('❌ インポートエラー:', error);
                         hideLoading();
                         alert('インポートに失敗しました: ' + error.message);
                     }
@@ -1205,9 +1275,7 @@
                                 continue;
                             }
                             
-                            if (line.startsWith('===') && inFuelSection) {
-                                break;
-                            }
+                            if (line.startsWith('===') && inFuelSection) break;
                             
                             if (inFuelSection && line) {
                                 const delimiter = line.includes('\t') ? '\t' : ',';
@@ -1218,7 +1286,6 @@
                                     const vehicle = state.vehicles.find(v => v.number === vehicleNumber);
                                     
                                     if (vehicle) {
-                                        // 日付変換：2025/12/3 → 2025-12-03
                                         let formattedDate = parts[1];
                                         if (parts[1].includes('/')) {
                                             const dateParts = parts[1].split('/');
@@ -1252,7 +1319,6 @@
                         alert(`✅ ${importCount}件の燃料記録をインポートしました！`);
                         render();
                     } catch (error) {
-                        console.error('❌ インポートエラー:', error);
                         hideLoading();
                         alert('インポートに失敗しました: ' + error.message);
                     }
@@ -1289,9 +1355,7 @@
                                 continue;
                             }
                             
-                            if (line.startsWith('===') && inRepairSection) {
-                                break;
-                            }
+                            if (line.startsWith('===') && inRepairSection) break;
                             
                             if (inRepairSection && line) {
                                 const delimiter = line.includes('\t') ? '\t' : ',';
@@ -1324,7 +1388,6 @@
                         alert(`✅ ${importCount}件の修繕記録をインポートしました！`);
                         render();
                     } catch (error) {
-                        console.error('❌ インポートエラー:', error);
                         hideLoading();
                         alert('インポートに失敗しました: ' + error.message);
                     }
@@ -1368,9 +1431,7 @@
             state.showAddVehicle = false;
             uploadedImage = null;
             isSubmitting = false;
-            if (state.activeView !== 'detail') {
-                state.selectedVehicle = null;
-            }
+            if (state.activeView !== 'detail') state.selectedVehicle = null;
             render();
         }
 
@@ -1410,6 +1471,42 @@
             render();
         }
 
+        function openAddAccident() {
+            state.editingAccident = null;
+            state.showAddAccident = true;
+            render();
+        }
+
+        function editAccident(id) {
+            state.editingAccident = state.accidents.find(a => a.id === id);
+            state.showAddAccident = true;
+            render();
+        }
+
+        function closeAccidentForm() {
+            state.showAddAccident = false;
+            state.editingAccident = null;
+            render();
+        }
+
+        function openAddInsurance() {
+            state.editingInsurance = null;
+            state.showAddInsurance = true;
+            render();
+        }
+
+        function editInsurance(id) {
+            state.editingInsurance = state.insurances.find(i => i.id === id);
+            state.showAddInsurance = true;
+            render();
+        }
+
+        function closeInsuranceForm() {
+            state.showAddInsurance = false;
+            state.editingInsurance = null;
+            render();
+        }
+
         function switchTab(tab) {
             state.activeTab = tab;
             render();
@@ -1430,6 +1527,8 @@
                 state.showAddVehicle = false;
                 state.showAddRepair = false;
                 state.showAddFuel = false;
+                state.showAddAccident = false;
+                state.showAddInsurance = false;
                 state.showEmergencyModal = false;
                 render();
             }
@@ -1439,20 +1538,17 @@
             const file = event.target.files[0];
             if (!file) return;
             
-            // 画像を圧縮
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = () => {
-                    // Canvasで圧縮
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    const MAX_HEIGHT = 600;
+                    const MAX_WIDTH = 500;
+                    const MAX_HEIGHT = 400;
                     
                     let width = img.width;
                     let height = img.height;
                     
-                    // アスペクト比を保持してリサイズ
                     if (width > height) {
                         if (width > MAX_WIDTH) {
                             height = height * (MAX_WIDTH / width);
@@ -1471,10 +1567,9 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // JPEG形式、品質50%で圧縮（さらに小さく）
-                    uploadedImage = canvas.toDataURL('image/jpeg', 0.5);
+                    // 品質30%
+                    uploadedImage = canvas.toDataURL('image/jpeg', 0.3);
                     
-                    // プレビュー表示
                     const preview = document.getElementById('image-preview');
                     if (preview) {
                         preview.innerHTML = `<div style="margin-top: 10px;"><img src="${uploadedImage}" alt="Preview" style="max-width: 100%; border-radius: 8px;"></div>`;
@@ -1494,7 +1589,7 @@
             event.preventDefault();
             
             if (isSubmitting) {
-                console.log('⚠️ 二重送信を防止しました');
+                console.log('⚠️ 二重送信を防止');
                 return;
             }
             isSubmitting = true;
@@ -1502,31 +1597,25 @@
             try {
                 const formData = new FormData(event.target);
                 
-                const year = parseInt(formData.get('year')) || 0;
-                const mileage = parseInt(formData.get('mileage')) || 0;
-                const purchasePrice = parseInt(formData.get('purchasePrice')) || 0;
-                
                 const vehicleData = {
                     id: state.selectedVehicle?.id,
                     number: formData.get('number') || '',
                     name: formData.get('name') || '',
-                    year: year,
-                    mileage: mileage,
-                    purchasePrice: purchasePrice,
+                    year: parseInt(formData.get('year')) || 0,
+                    mileage: parseInt(formData.get('mileage')) || 0,
+                    purchasePrice: parseInt(formData.get('purchasePrice')) || 0,
                     purchaseDate: formData.get('purchaseDate') || '',
                     inspectionDate: formData.get('inspectionDate') || '',
                     insuranceDate: formData.get('insuranceDate') || '',
                     image: uploadedImage || state.selectedVehicle?.image || null
                 };
                 
-                console.log('📋 フォームデータ:', vehicleData);
-                
                 saveVehicle(vehicleData).finally(() => {
                     isSubmitting = false;
                 });
             } catch (error) {
                 console.error('❌ フォーム送信エラー:', error);
-                alert('フォーム送信エラー: ' + error.message);
+                alert('送信エラー: ' + error.message);
                 isSubmitting = false;
             }
         }
@@ -1543,10 +1632,8 @@
                     garage: formData.get('garage') || '',
                     notes: formData.get('notes') || ''
                 };
-                console.log('🔧 修繕データ:', repairData);
                 saveRepair(repairData);
             } catch (error) {
-                console.error('❌ 修繕フォーム送信エラー:', error);
                 alert('送信エラー: ' + error.message);
             }
         }
@@ -1563,10 +1650,46 @@
                     mileage: parseInt(formData.get('mileage')) || 0,
                     fuelEfficiency: parseFloat(formData.get('fuelEfficiency')) || 0
                 };
-                console.log('⛽ 燃料データ:', fuelData);
                 saveFuel(fuelData);
             } catch (error) {
-                console.error('❌ 燃料フォーム送信エラー:', error);
+                alert('送信エラー: ' + error.message);
+            }
+        }
+
+        function submitAccidentForm(event) {
+            event.preventDefault();
+            try {
+                const formData = new FormData(event.target);
+                const accidentData = {
+                    id: formData.get('id') || `a${Date.now()}`,
+                    date: formData.get('date') || '',
+                    type: formData.get('type') || '',
+                    location: formData.get('location') || '',
+                    description: formData.get('description') || '',
+                    repairCost: parseInt(formData.get('repairCost')) || 0,
+                    insuranceClaim: parseInt(formData.get('insuranceClaim')) || 0
+                };
+                saveAccident(accidentData);
+            } catch (error) {
+                alert('送信エラー: ' + error.message);
+            }
+        }
+
+        function submitInsuranceForm(event) {
+            event.preventDefault();
+            try {
+                const formData = new FormData(event.target);
+                const insuranceData = {
+                    id: formData.get('id') || `ins${Date.now()}`,
+                    company: formData.get('company') || '',
+                    policyNumber: formData.get('policyNumber') || '',
+                    startDate: formData.get('startDate') || '',
+                    endDate: formData.get('endDate') || '',
+                    annualCost: parseInt(formData.get('annualCost')) || 0,
+                    coverage: formData.get('coverage') || ''
+                };
+                saveInsurance(insuranceData);
+            } catch (error) {
                 alert('送信エラー: ' + error.message);
             }
         }
@@ -1583,7 +1706,6 @@
                 ? state.fuelRecords.reduce((sum, f) => sum + (f.fuelEfficiency || 0), 0) / state.fuelRecords.length 
                 : 0;
             
-            // 年度計算（4月～3月）
             const today = new Date();
             const currentMonth = today.getMonth();
             const currentYear = today.getFullYear();
@@ -1593,12 +1715,12 @@
             const fiscalEndDate = new Date(fiscalYearStart + 1, 2, 31, 23, 59, 59);
             
             const thisFiscalYearRepairs = state.repairs.filter(r => {
-                const date = new Date(r.date);
+                const date = new Date(formatDate(r.date));
                 return date >= fiscalStartDate && date <= fiscalEndDate;
             }).reduce((sum, r) => sum + (r.cost || 0), 0);
             
             const thisFiscalYearFuel = state.fuelRecords.filter(f => {
-                const date = new Date(f.date);
+                const date = new Date(formatDate(f.date));
                 return date >= fiscalStartDate && date <= fiscalEndDate;
             }).reduce((sum, f) => sum + (f.cost || 0), 0);
             
@@ -1613,10 +1735,6 @@
                 thisFiscalYearTotal: (thisFiscalYearRepairs || 0) + (thisFiscalYearFuel || 0),
                 fiscalYear: `${fiscalYearStart}年度`
             };
-        }
-
-        function getFilteredVehicles() {
-            return state.vehicles;
         }
 
         // ========================================
@@ -1644,6 +1762,8 @@
                     ${state.showAddVehicle ? renderVehicleForm() : ''}
                     ${state.showAddRepair ? renderRepairForm() : ''}
                     ${state.showAddFuel ? renderFuelForm() : ''}
+                    ${state.showAddAccident ? renderAccidentForm() : ''}
+                    ${state.showAddInsurance ? renderInsuranceForm() : ''}
                     ${state.showEmergencyModal ? renderEmergencyModal() : ''}
                     ${state.showNotifications ? renderNotifications() : ''}
                 `;
@@ -1759,7 +1879,7 @@
 
         function renderDashboard() {
             const costs = calculateTotalCosts();
-            const filteredVehicles = getFilteredVehicles();
+            const filteredVehicles = state.vehicles;
 
             return `
                 ${renderStats(costs)}
@@ -1846,7 +1966,7 @@
         }
 
         function renderVehicleCard(vehicle) {
-            const inspectionDate = new Date(vehicle.inspectionDate);
+            const inspectionDate = new Date(formatDate(vehicle.inspectionDate));
             const today = new Date();
             const daysUntilInspection = Math.ceil((inspectionDate - today) / (24 * 60 * 60 * 1000));
             const isInspectionSoon = daysUntilInspection < 30 && daysUntilInspection > 0;
@@ -1876,7 +1996,7 @@
                             </div>
                             <div class="vehicle-info-item">
                                 <label>車検満了</label>
-                                <div class="value">${vehicle.inspectionDate || ''}</div>
+                                <div class="value">${formatDate(vehicle.inspectionDate) || ''}</div>
                             </div>
                             <div class="vehicle-info-item">
                                 <label>修繕費合計</label>
@@ -1894,8 +2014,6 @@
 
         function renderDetail() {
             const vehicle = state.selectedVehicle;
-            const vehicleRepairs = state.repairs.filter(r => r.vehicleId === vehicle.id);
-            const vehicleFuel = state.fuelRecords.filter(f => f.vehicleId === vehicle.id);
 
             return `
                 <div style="max-width: 1200px; margin: 0 auto;">
@@ -1979,15 +2097,15 @@
                                 </div>
                                 <div>
                                     <label style="color: #64748b; font-size: 13px;">購入日</label>
-                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.purchaseDate}</div>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${formatDate(vehicle.purchaseDate)}</div>
                                 </div>
                                 <div>
                                     <label style="color: #64748b; font-size: 13px;">車検満了日</label>
-                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.inspectionDate}</div>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${formatDate(vehicle.inspectionDate)}</div>
                                 </div>
                                 <div>
                                     <label style="color: #64748b; font-size: 13px;">保険満了日</label>
-                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.insuranceDate}</div>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${formatDate(vehicle.insuranceDate)}</div>
                                 </div>
                             </div>
                         </div>
@@ -1999,9 +2117,9 @@
                 case 'fuel':
                     return renderFuelTab();
                 case 'accidents':
-                    return `<div style="padding: 40px; text-align: center; color: #64748b;"><p>事故歴機能は準備中です</p></div>`;
+                    return renderAccidentsTab();
                 case 'insurance':
-                    return `<div style="padding: 40px; text-align: center; color: #64748b;"><p>保険情報機能は準備中です</p></div>`;
+                    return renderInsuranceTab();
                 case 'documents':
                     return `<div style="padding: 40px; text-align: center; color: #64748b;"><p>保管書類機能は準備中です</p></div>`;
                 default:
@@ -2021,7 +2139,7 @@
                                 <div class="record-header">
                                     <div>
                                         <div style="font-weight: 600; font-size: 16px;">${r.type}</div>
-                                        <div style="color: #64748b; font-size: 13px; margin-top: 4px;">${r.date} - ${r.garage}</div>
+                                        <div style="color: #64748b; font-size: 13px; margin-top: 4px;">${formatDate(r.date)} - ${r.garage}</div>
                                         ${r.notes ? `<div style="color: #64748b; font-size: 13px; margin-top: 8px;">${r.notes}</div>` : ''}
                                     </div>
                                     <div class="record-actions">
@@ -2048,7 +2166,7 @@
                             <div class="record-item">
                                 <div class="record-header">
                                     <div>
-                                        <div style="font-weight: 600; font-size: 16px;">${f.date}</div>
+                                        <div style="font-weight: 600; font-size: 16px;">${formatDate(f.date)}</div>
                                         <div style="color: #64748b; font-size: 13px; margin-top: 4px;">${f.liters}L - 燃費: ${f.fuelEfficiency}km/L - 走行: ${f.mileage}km</div>
                                     </div>
                                     <div class="record-actions">
@@ -2059,6 +2177,68 @@
                                 <div style="font-weight: 700; font-size: 18px; margin-top: 12px;">¥${(f.cost || 0).toLocaleString()}</div>
                             </div>
                         `).join('') : '<div class="empty-state"><div class="empty-state-icon">⛽</div><p>燃料記録がありません</p></div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAccidentsTab() {
+            const accidents = state.accidents.filter(a => a.vehicleId === state.selectedVehicle.id);
+            
+            return `
+                <div>
+                    <button class="btn-primary" onclick="openAddAccident()">+ 事故記録を追加</button>
+                    <div style="margin-top: 24px;">
+                        ${accidents.length > 0 ? accidents.map(a => `
+                            <div class="record-item">
+                                <div class="record-header">
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 16px;">${a.type}</div>
+                                        <div style="color: #64748b; font-size: 13px; margin-top: 4px;">${formatDate(a.date)} - ${a.location}</div>
+                                        ${a.description ? `<div style="color: #64748b; font-size: 13px; margin-top: 8px;">${a.description}</div>` : ''}
+                                    </div>
+                                    <div class="record-actions">
+                                        <button class="btn-secondary" onclick="editAccident('${a.id}')">編集</button>
+                                        <button class="btn-secondary" onclick="deleteAccident('${a.id}')" style="color: #dc2626;">削除</button>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 12px;">
+                                    <div style="font-size: 13px; color: #64748b;">修理費: ¥${(a.repairCost || 0).toLocaleString()}</div>
+                                    <div style="font-size: 13px; color: #64748b;">保険請求: ¥${(a.insuranceClaim || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>事故記録がありません</p></div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderInsuranceTab() {
+            const insurances = state.insurances.filter(i => i.vehicleId === state.selectedVehicle.id);
+            
+            return `
+                <div>
+                    <button class="btn-primary" onclick="openAddInsurance()">+ 保険情報を追加</button>
+                    <div style="margin-top: 24px;">
+                        ${insurances.length > 0 ? insurances.map(i => `
+                            <div class="record-item">
+                                <div class="record-header">
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 16px;">${i.company}</div>
+                                        <div style="color: #64748b; font-size: 13px; margin-top: 4px;">証券番号: ${i.policyNumber}</div>
+                                        <div style="color: #64748b; font-size: 13px; margin-top: 4px;">期間: ${formatDate(i.startDate)} 〜 ${formatDate(i.endDate)}</div>
+                                    </div>
+                                    <div class="record-actions">
+                                        <button class="btn-secondary" onclick="editInsurance('${i.id}')">編集</button>
+                                        <button class="btn-secondary" onclick="deleteInsurance('${i.id}')" style="color: #dc2626;">削除</button>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 12px;">
+                                    <div style="font-weight: 700; font-size: 18px;">¥${(i.annualCost || 0).toLocaleString()}/年</div>
+                                    <div style="font-size: 13px; color: #64748b; margin-top: 4px;">${i.coverage || ''}</div>
+                                </div>
+                            </div>
+                        `).join('') : '<div class="empty-state"><div class="empty-state-icon">🛡️</div><p>保険情報がありません</p></div>'}
                     </div>
                 </div>
             `;
@@ -2104,17 +2284,17 @@
                                 </div>
                                 <div class="form-group">
                                     <label>購入日</label>
-                                    <input type="date" class="form-control" name="purchaseDate" value="${vehicle ? vehicle.purchaseDate : ''}" required>
+                                    <input type="date" class="form-control" name="purchaseDate" value="${vehicle ? formatDate(vehicle.purchaseDate) : ''}" required>
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>車検満了日</label>
-                                    <input type="date" class="form-control" name="inspectionDate" value="${vehicle ? vehicle.inspectionDate : ''}" required>
+                                    <input type="date" class="form-control" name="inspectionDate" value="${vehicle ? formatDate(vehicle.inspectionDate) : ''}" required>
                                 </div>
                                 <div class="form-group">
                                     <label>保険満了日</label>
-                                    <input type="date" class="form-control" name="insuranceDate" value="${vehicle ? vehicle.insuranceDate : ''}" required>
+                                    <input type="date" class="form-control" name="insuranceDate" value="${vehicle ? formatDate(vehicle.insuranceDate) : ''}" required>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -2142,7 +2322,7 @@
                             ${isEditing ? `<input type="hidden" name="id" value="${repair.id}">` : ''}
                             <div class="form-group">
                                 <label>日付</label>
-                                <input type="date" class="form-control" name="date" value="${isEditing ? repair.date : new Date().toISOString().split('T')[0]}" required>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? formatDate(repair.date) : new Date().toISOString().split('T')[0]}" required>
                             </div>
                             <div class="form-group">
                                 <label>作業内容</label>
@@ -2185,7 +2365,7 @@
                             ${isEditing ? `<input type="hidden" name="id" value="${fuel.id}">` : ''}
                             <div class="form-group">
                                 <label>給油日</label>
-                                <input type="date" class="form-control" name="date" value="${isEditing ? fuel.date : new Date().toISOString().split('T')[0]}" required>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? formatDate(fuel.date) : new Date().toISOString().split('T')[0]}" required>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
@@ -2209,6 +2389,104 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn-secondary" onclick="closeFuelForm()">キャンセル</button>
+                                <button type="submit" class="btn-primary">保存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAccidentForm() {
+            const accident = state.editingAccident;
+            const isEditing = accident !== null;
+            
+            return `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2>${isEditing ? '事故記録を編集' : '事故記録を追加'}</h2>
+                            <button class="close-btn" onclick="closeAccidentForm()">✕</button>
+                        </div>
+                        <form class="modal-body" onsubmit="submitAccidentForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${accident.id}">` : ''}
+                            <div class="form-group">
+                                <label>日付</label>
+                                <input type="date" class="form-control" name="date" value="${isEditing ? formatDate(accident.date) : new Date().toISOString().split('T')[0]}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>事故種類</label>
+                                <input type="text" class="form-control" name="type" value="${isEditing ? accident.type : ''}" placeholder="例: 追突、自損事故" required>
+                            </div>
+                            <div class="form-group">
+                                <label>発生場所</label>
+                                <input type="text" class="form-control" name="location" value="${isEditing ? accident.location : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>状況説明</label>
+                                <textarea class="form-control" name="description">${isEditing ? accident.description : ''}</textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>修理費 (円)</label>
+                                    <input type="number" class="form-control" name="repairCost" value="${isEditing ? accident.repairCost : 0}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>保険請求額 (円)</label>
+                                    <input type="number" class="form-control" name="insuranceClaim" value="${isEditing ? accident.insuranceClaim : 0}" required>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" onclick="closeAccidentForm()">キャンセル</button>
+                                <button type="submit" class="btn-primary">保存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderInsuranceForm() {
+            const insurance = state.editingInsurance;
+            const isEditing = insurance !== null;
+            
+            return `
+                <div class="modal-overlay" onclick="closeModal(event)">
+                    <div class="modal" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2>${isEditing ? '保険情報を編集' : '保険情報を追加'}</h2>
+                            <button class="close-btn" onclick="closeInsuranceForm()">✕</button>
+                        </div>
+                        <form class="modal-body" onsubmit="submitInsuranceForm(event)">
+                            ${isEditing ? `<input type="hidden" name="id" value="${insurance.id}">` : ''}
+                            <div class="form-group">
+                                <label>保険会社</label>
+                                <input type="text" class="form-control" name="company" value="${isEditing ? insurance.company : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>証券番号</label>
+                                <input type="text" class="form-control" name="policyNumber" value="${isEditing ? insurance.policyNumber : ''}" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>開始日</label>
+                                    <input type="date" class="form-control" name="startDate" value="${isEditing ? formatDate(insurance.startDate) : ''}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>満了日</label>
+                                    <input type="date" class="form-control" name="endDate" value="${isEditing ? formatDate(insurance.endDate) : ''}" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>年間保険料 (円)</label>
+                                <input type="number" class="form-control" name="annualCost" value="${isEditing ? insurance.annualCost : 0}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>補償内容</label>
+                                <textarea class="form-control" name="coverage">${isEditing ? insurance.coverage : ''}</textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-secondary" onclick="closeInsuranceForm()">キャンセル</button>
                                 <button type="submit" class="btn-primary">保存</button>
                             </div>
                         </form>
