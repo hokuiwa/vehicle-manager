@@ -1228,19 +1228,56 @@
         }
 
         function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    uploadedImage = e.target.result;
-                    const preview = document.getElementById('image-preview');
-                    if (preview) {
-                        preview.innerHTML = `<div class="file-preview"><img src="${uploadedImage}" alt="Preview"></div>`;
-                    }
-                };
-                reader.readAsDataURL(file);
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // 画像を圧縮
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            // Canvasで圧縮
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 600;
+            
+            let width = img.width;
+            let height = img.height;
+            
+            // アスペクト比を保持してリサイズ
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height = height * (MAX_WIDTH / width);
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width = width * (MAX_HEIGHT / height);
+                    height = MAX_HEIGHT;
+                }
             }
-        }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // JPEG形式、品質70%で圧縮
+            uploadedImage = canvas.toDataURL('image/jpeg', 0.7);
+            
+            // プレビュー表示
+            const preview = document.getElementById('image-preview');
+            if (preview) {
+                preview.innerHTML = `<div class="file-preview"><img src="${uploadedImage}" alt="Preview" style="max-width: 100%; border-radius: 8px; margin-top: 10px;"></div>`;
+            }
+            
+            console.log('📷 画像圧縮完了:', Math.round(uploadedImage.length / 1024), 'KB');
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
 
         // ========================================
         // Form Submission
