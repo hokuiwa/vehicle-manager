@@ -1935,6 +1935,24 @@
             }
         }
 
+        function convertDriveUrl(url) {
+    if (!url) return null;
+    
+    // Google DriveのファイルIDを抽出する正規表現
+    const regExp = /\/d\/([^\/]+)|id=([^\&]+)/;
+    const match = url.match(regExp);
+    
+    if (match) {
+        const fileId = match[1] || match[2];
+        // プレビュー用URLではなく、直接画像データを取得するURLに変換
+        // sz=w500 をつけると、読み込みを軽くするためにリサイズされた画像を取得できます
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+    }
+    
+    // すでに直リンクの場合や、ドライブ以外のURLならそのまま返す
+    return url;
+}
+        
         function renderHeader() {
             const notifications = getNotifications();
             return `
