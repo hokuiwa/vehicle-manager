@@ -1883,61 +1883,57 @@
         // Render Functions
         // ========================================
         function render() {
-  try {
-    const app = document.getElementById('app');
+            try {
+                const app = document.getElementById('app');
+                
+                if (!app) {
+                    console.error('❌ アプリ要素が見つかりません');
+                    return;
+                }
+                
+                if (state.isLoading) {
+                    app.innerHTML = '<div class="loading">読み込み中...</div>';
+                    return;
+                }
 
-    if (!app) {
-      console.error('❌ アプリ要素が見つかりません');
-      return;
-    }
-
-    if (state.isLoading) {
-      app.innerHTML = '<div class="loading">読み込み中...</div>';
-      return;
-    }
-
-    app.innerHTML = `
-      ${renderHeader()}
-      <div class="container">
-        ${state.activeView === 'dashboard' ? renderDashboard() : renderDetail()}
-      </div>
-      ${state.showAddVehicle ? renderVehicleForm() : ''}
-      ${state.showAddRepair ? renderRepairForm() : ''}
-      ${state.showAddFuel ? renderFuelForm() : ''}
-      ${state.showAddAccident ? renderAccidentForm() : ''}
-      ${state.showAddInsurance ? renderInsuranceForm() : ''}
-      ${state.showAddMaintenance ? renderMaintenanceForm() : ''}
-      ${state.showEmergencyModal ? renderEmergencyModal() : ''}
-      ${state.showNotifications ? renderNotifications() : ''}
-    `;
-
-    // dashboard / detail でグラフ描画（Chart.js未ロードならスキップ）
-    if (state.activeView === 'dashboard' || state.activeView === 'detail') {
-      setTimeout(() => {
-        if (typeof Chart === 'undefined') {
-          console.warn('⚠️ Chart.js が読み込まれていないため、グラフ描画をスキップします');
-          return;
+                app.innerHTML = `
+                    ${renderHeader()}
+                    <div class="container">
+                        ${state.activeView === 'dashboard' ? renderDashboard() : renderDetail()}
+                    </div>
+                    ${state.showAddVehicle ? renderVehicleForm() : ''}
+                    ${state.showAddRepair ? renderRepairForm() : ''}
+                    ${state.showAddFuel ? renderFuelForm() : ''}
+                    ${state.showAddAccident ? renderAccidentForm() : ''}
+                    ${state.showAddInsurance ? renderInsuranceForm() : ''}
+                    ${state.showAddMaintenance ? renderMaintenanceForm() : ''}
+                    ${state.showEmergencyModal ? renderEmergencyModal() : ''}
+                    ${state.showNotifications ? renderNotifications() : ''}
+                `;
+                
+                // ダッシュボード表示時にグラフを描画
+                if (state.activeView === 'dashboard') {
+                    setTimeout(() => {
+                        createRepairCostChart();
+                        createFuelEfficiencyChart();
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('❌ レンダリングエラー:', error);
+                const app = document.getElementById('app');
+                if (app) {
+                    app.innerHTML = `
+                        <div style="padding: 40px; text-align: center;">
+                            <h2 style="color: #dc2626;">⚠️ エラーが発生しました</h2>
+                            <p style="color: #64748b; margin: 20px 0;">${error.message}</p>
+                            <button class="btn-primary" onclick="location.reload()" style="margin: 0 auto;">
+                                ページを再読み込み
+                            </button>
+                        </div>
+                    `;
+                }
+            }
         }
-        createRepairCostChart();
-        createFuelEfficiencyChart();
-      }, 0);
-    }
-  } catch (error) {
-    console.error('❌ レンダリングエラー:', error);
-    const app = document.getElementById('app');
-    if (app) {
-      app.innerHTML = `
-        <div style="padding: 40px; text-align: center;">
-          <h2 style="color: #dc2626;">⚠️ エラーが発生しました</h2>
-          <p style="color: #64748b; margin: 20px 0;">${error.message}</p>
-          <button class="btn-primary" onclick="location.reload()" style="margin: 0 auto;">
-            ページを再読み込み
-          </button>
-        </div>
-      `;
-    }
-  }
-}
 
         function renderHeader() {
             const notifications = getNotifications();
@@ -2063,24 +2059,6 @@
             `;
         }
 
-        function convertDriveUrl(url) {
-    if (!url) return null;
-    
-    // Google DriveのファイルIDを抽出する正規表現
-    const regExp = /\/d\/([^\/]+)|id=([^\&]+)/;
-    const match = url.match(regExp);
-    
-    if (match) {
-        const fileId = match[1] || match[2];
-        // プレビュー用URLではなく、直接画像データを取得するURLに変換
-        // sz=w500 をつけると、読み込みを軽くするためにリサイズされた画像を取得できます
-        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
-    }
-    
-    // すでに直リンクの場合や、ドライブ以外のURLならそのまま返す
-    return url;
-}
-        
         function renderStats(costs) {
             return `
                 <div class="stats-grid">
@@ -2163,8 +2141,7 @@
             const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
 
             // imageUrlを自動変換
-            // ... 前半の集計ロジックはそのまま ...
-    const imageSource = convertDriveUrl(vehicle.imageUrl || vehicle.image);
+            const imageSource = convertDriveUrl(vehicle.imageUrl || vehicle.image);
 
     return `
         <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
@@ -2174,7 +2151,7 @@
                     : `<div class="vehicle-image-placeholder">🚗</div>`
                 }
                 ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
-        </div>
+            </div>
                     <div class="vehicle-content">
                         <div class="vehicle-title">
                             <h3>${vehicle.name || ''}</h3>
@@ -2262,73 +2239,97 @@
         }
 
         function renderDetailTab() {
-    const vehicle = state.selectedVehicle;
-    
-    switch(state.activeTab) {
-        case 'basic':
-            // ここでは「戻るボタン」や「グラフ」は含めず、基本情報のテーブル/リストだけを返します
-            return `
-                <div style="padding-top: 20px;">
-                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">基本情報</h3>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+            const vehicle = state.selectedVehicle;
+            
+            switch(state.activeTab) {
+                case 'basic':
+                    return `
                         <div>
-                            <label style="color: #64748b; font-size: 13px;">車両番号</label>
-                            <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.number || ''}</div>
-                        </div>
-                        <div>
-                            <label style="color: #64748b; font-size: 13px;">車両名</label>
-                            <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.name || ''}</div>
-                        </div>
-                        <div>
-                            <label style="color: #64748b; font-size: 13px;">年式</label>
-                            <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.year || 0}年</div>
-                        </div>
-                        <div>
-                            <label style="color: #64748b; font-size: 13px;">走行距離</label>
-                            <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${(vehicle.mileage || 0).toLocaleString()} km</div>
-                        </div>
-                        <div>
-                            <label style="color: #64748b; font-size: 13px;">購入価格</label>
-                            <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">¥${(vehicle.purchasePrice || 0).toLocaleString()}</div>
-                        </div>
-                        <div>
-                            <label style="color: #64748b; font-size: 13px;">車検満了日</label>
-                            <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${formatDate(vehicle.inspectionDate)}</div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
-                        <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">📄 書類・画像</h4>
-                        <div style="display: grid; gap: 16px;">
-                            ${vehicle.imageUrl ? `
-                                <div style="background: #f8fafc; padding: 16px; border-radius: 8px;">
-                                    <label style="color: #64748b; font-size: 13px; display: block; margin-bottom: 8px;">車両写真</label>
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <img src="${convertDriveUrl(vehicle.imageUrl)}" style="width: 120px; height: 90px; object-fit: cover; border-radius: 6px;">
-                                        <a href="${convertDriveUrl(vehicle.imageUrl)}" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 14px;">📷 画像を開く</a>
-                                    </div>
+                            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">基本情報</h3>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">車両番号</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.number}</div>
                                 </div>
-                            ` : '<div style="color: #64748b;">車両写真: 未登録</div>'}
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">車両名</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.name}</div>
+                                </div>
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">年式</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.year}年</div>
+                                </div>
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">走行距離</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.mileage.toLocaleString()} km</div>
+                                </div>
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">購入価格</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">¥${vehicle.purchasePrice.toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">購入日</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${formatDate(vehicle.purchaseDate)}</div>
+                                </div>
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">車検満了日</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${formatDate(vehicle.inspectionDate)}</div>
+                                </div>
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">保険満了日</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${formatDate(vehicle.insuranceDate)}</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                                <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">📄 書類・画像</h4>
+                                <div style="display: grid; gap: 16px;">
+                                    ${vehicle.imageUrl ? `
+                                        <div style="background: #f8fafc; padding: 16px; border-radius: 8px;">
+                                            <label style="color: #64748b; font-size: 13px; display: block; margin-bottom: 8px;">車両写真</label>
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <img src="${convertDriveUrl(vehicle.imageUrl)}" alt="${vehicle.name}" style="width: 120px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                <div style="display: none; width: 120px; height: 90px; background: #fee2e2; border-radius: 6px; align-items: center; justify-content: center; font-size: 32px;">❌</div>
+                                                <div>
+                                                    <a href="${convertDriveUrl(vehicle.imageUrl)}" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 14px;">📷 画像を開く</a>
+                                                    <div style="color: #64748b; font-size: 11px; margin-top: 4px; font-family: monospace; word-break: break-all;">${vehicle.imageUrl.substring(0, 40)}...</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : '<div style="background: #f8fafc; padding: 16px; border-radius: 8px; color: #64748b; font-size: 13px;">車両写真: 未登録</div>'}
+                                    
+                                    ${vehicle.inspectionCertUrl ? `
+                                        <div style="background: #f8fafc; padding: 16px; border-radius: 8px;">
+                                            <label style="color: #64748b; font-size: 13px; display: block; margin-bottom: 8px;">車検証PDF</label>
+                                            <a href="${vehicle.inspectionCertUrl}" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                    <polyline points="14 2 14 8 20 8"/>
+                                                </svg>
+                                                車検証PDFを開く
+                                            </a>
+                                        </div>
+                                    ` : '<div style="background: #f8fafc; padding: 16px; border-radius: 8px; color: #64748b; font-size: 13px;">車検証PDF: 未登録</div>'}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            `;
-        case 'maintenance':
-            return renderMaintenanceTab();
-        case 'repairs':
-            return renderRepairsTab();
-        case 'fuel':
-            return renderFuelTab();
-        case 'accidents':
-            return renderAccidentsTab();
-        case 'insurance':
-            return renderInsuranceTab();
-        case 'documents':
-            return `<div style="padding: 40px; text-align: center; color: #64748b;"><p>保管書類機能は準備中です</p></div>`;
-        default:
-            return '';
-    }
-}
+                    `;
+                case 'maintenance':
+                    return renderMaintenanceTab();
+                case 'repairs':
+                    return renderRepairsTab();
+                case 'fuel':
+                    return renderFuelTab();
+                case 'accidents':
+                    return renderAccidentsTab();
+                case 'insurance':
+                    return renderInsuranceTab();
+                case 'documents':
+                    return `<div style="padding: 40px; text-align: center; color: #64748b;"><p>保管書類機能は準備中です</p></div>`;
+                default:
+                    return '';
+            }
+        }
 
         function renderRepairsTab() {
             const repairs = state.repairs
@@ -2857,142 +2858,170 @@
             `;
         }
 
-        function render() {
-    const app = document.getElementById('app');
-    
-    // 1. まずHTMLを流し込む
-    app.innerHTML = `
-        <canvas id="repairCostChart"></canvas>
-        <canvas id="fuelEfficiencyChart"></canvas>
-    `;
+        // ========================================
+        // グラフ描画関数
+        // ========================================
+        let repairChart = null;
+        let fuelChart = null;
 
-    // 2. HTMLが配置された「直後」にグラフを描画する
-    createRepairCostChart();
-    createFuelEfficiencyChart();
-}
- 
-// ========================================
-// グラフ描画関数（修正版）
-// ========================================
-let repairChart = null;
-let fuelChart = null;
+        function createRepairCostChart() {
+            const canvas = document.getElementById('repairCostChart');
+            if (!canvas) return;
+            
+            // 既存のチャートを破棄
+            if (repairChart) {
+                repairChart.destroy();
+            }
+            
+            // 月別に燃料費と修繕費を集計
+            const monthlyData = {};
+            
+            // 修繕費を集計
+            state.repairs.forEach(r => {
+                const date = new Date(formatDate(r.date));
+                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { fuel: 0, repair: 0 };
+                }
+                monthlyData[monthKey].repair += (r.cost || 0);
+            });
+            
+            // 燃料費を集計
+            state.fuelRecords.forEach(f => {
+                const date = new Date(formatDate(f.date));
+                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { fuel: 0, repair: 0 };
+                }
+                monthlyData[monthKey].fuel += (f.cost || 0);
+            });
+            
+            const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
+            const fuelData = sortedMonths.map(month => monthlyData[month].fuel);
+            const repairData = sortedMonths.map(month => monthlyData[month].repair);
+            
+            repairChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: sortedMonths,
+                    datasets: [
+                        {
+                            label: '燃料費',
+                            data: fuelData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgb(16, 185, 129)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '修繕費',
+                            data: repairData,
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                            borderColor: 'rgb(245, 158, 11)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
-// 1. 月別トータルコスト（積層バーチャート）
-// 1. 月別トータルコスト（積層バーチャート）
-function createRepairCostChart() {
-    const canvas = document.getElementById('repairCostChart');
-    if (!canvas) return; // キャンバスがなければ何もしない
-
-    if (repairChart) repairChart.destroy();
-
-    const monthlyData = {};
-    // IDを文字列として比較するように強制（型エラー対策）
-    const selectedId = state.selectedVehicle ? String(state.selectedVehicle.id) : null;
-
-    // 修繕費を集計
-    state.repairs
-        .filter(r => !selectedId || String(r.vehicleId) === selectedId)
-        .forEach(r => {
-            const date = new Date(formatDate(r.date));
-            const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-            if (!monthlyData[monthKey]) monthlyData[monthKey] = { fuel: 0, repair: 0 };
-            monthlyData[monthKey].repair += (Number(r.cost) || 0);
-        });
-
-    // 燃料費を集計
-    state.fuelRecords
-        .filter(f => !selectedId || String(f.vehicleId) === selectedId)
-        .forEach(f => {
-            const date = new Date(formatDate(f.date));
-            const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-            if (!monthlyData[monthKey]) monthlyData[monthKey] = { fuel: 0, repair: 0 };
-            monthlyData[monthKey].fuel += (Number(f.cost) || 0);
-        });
-
-    const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
-    if (sortedMonths.length === 0) return; // データがなければ描画しない
-
-    repairChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: sortedMonths,
-            datasets: [
-                { label: '燃料費', data: sortedMonths.map(m => monthlyData[m].fuel), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 4 },
-                { label: '修繕費', data: sortedMonths.map(m => monthlyData[m].repair), backgroundColor: 'rgba(245, 158, 11, 0.7)', borderRadius: 4 }
-            ]
-        },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
-    });
-}
-
-// 2. 1kmあたり維持費推移
-function createFuelEfficiencyChart() {
-    const canvas = document.getElementById('fuelEfficiencyChart');
-    const ctx = canvas?.getContext('2d');
-    if (!ctx) return;
-
-    if (fuelChart) fuelChart.destroy();
-
-    const selectedId = state.selectedVehicle ? String(state.selectedVehicle.id) : null;
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
-    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
-
-    const monthlyData = {};
-
-    state.repairs.filter(r => !selectedId || String(r.vehicleId) === selectedId).forEach(r => {
-        const date = new Date(formatDate(r.date));
-        const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-        if (!monthlyData[monthKey]) monthlyData[monthKey] = { cost: 0, mileage: 0 };
-        monthlyData[monthKey].cost += (Number(r.cost) || 0);
-    });
-
-    state.fuelRecords.filter(f => !selectedId || String(f.vehicleId) === selectedId).forEach(f => {
-        const date = new Date(formatDate(f.date));
-        const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-        if (!monthlyData[monthKey]) monthlyData[monthKey] = { cost: 0, mileage: 0 };
-        monthlyData[monthKey].cost += (Number(f.cost) || 0);
-        monthlyData[monthKey].mileage += (Number(f.mileage) || 0);
-    });
-
-    const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
-    if (sortedMonths.length === 0) return;
-
-    const costPerKm = sortedMonths.map(m => monthlyData[m].mileage > 0 ? monthlyData[m].cost / monthlyData[m].mileage : 0);
-
-    fuelChart = new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: sortedMonths,
-            datasets: [{
-                label: '1kmあたり維持費',
-                data: costPerKm,
-                borderColor: '#3b82f6',
-                backgroundColor: gradient,
-                fill: true,
-                tension: 0.4,
-                borderWidth: 3
-            }]
-        },
-        options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-        y: { 
-            beginAtZero: true, 
-            ticks: { callback: v => '¥' + v.toFixed(1) } // 小数点1位まで表示
-        },
-        x: { grid: { display: false } }
-    },
-    // ★ここを追加：データが1点だけでも「点」を大きく表示する設定
-    elements: {
-        point: {
-            radius: 6, // 点を大きく
-            hitRadius: 10,
-            hoverRadius: 8 } } }
-    });
-}
+        function createFuelEfficiencyChart() {
+            const canvas = document.getElementById('fuelEfficiencyChart');
+            if (!canvas) return;
+            
+            if (fuelChart) {
+                fuelChart.destroy();
+            }
+            
+            // 月別の維持費と走行距離を集計
+            const monthlyData = {};
+            
+            // 修繕費を集計
+            state.repairs.forEach(r => {
+                const date = new Date(formatDate(r.date));
+                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { cost: 0, mileage: 0 };
+                }
+                monthlyData[monthKey].cost += (r.cost || 0);
+            });
+            
+            // 燃料費と走行距離を集計
+            state.fuelRecords.forEach(f => {
+                const date = new Date(formatDate(f.date));
+                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = { cost: 0, mileage: 0 };
+                }
+                monthlyData[monthKey].cost += (f.cost || 0);
+                monthlyData[monthKey].mileage += (f.mileage || 0);
+            });
+            
+            // 1kmあたりの維持費を計算
+            const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
+            const costPerKm = sortedMonths.map(month => {
+                const data = monthlyData[month];
+                return data.mileage > 0 ? data.cost / data.mileage : 0;
+            });
+            
+            fuelChart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: sortedMonths,
+                    datasets: [{
+                        label: '1kmあたり維持費',
+                        data: costPerKm,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         // ========================================
         // Initialize
