@@ -2898,110 +2898,86 @@ let repairChart = null;
 let fuelChart = null;
 
 // 1. 月別トータルコスト（積層バーチャート）
+// 1. 月別トータルコスト（積層バーチャート）
 function createRepairCostChart() {
     const canvas = document.getElementById('repairCostChart');
-    if (!canvas) return;
+    if (!canvas) return; // キャンバスがなければ何もしない
 
-    if (repairChart) {
-        repairChart.destroy();
-    }
+    if (repairChart) repairChart.destroy();
 
     const monthlyData = {};
-    const selectedId = state.selectedVehicle ? state.selectedVehicle.id : null;
+    // IDを文字列として比較するように強制（型エラー対策）
+    const selectedId = state.selectedVehicle ? String(state.selectedVehicle.id) : null;
 
-    // 修繕費を集計（選択中車両のみ、未選択なら全車両）
+    // 修繕費を集計
     state.repairs
-        .filter(r => !selectedId || r.vehicleId === selectedId)
+        .filter(r => !selectedId || String(r.vehicleId) === selectedId)
         .forEach(r => {
             const date = new Date(formatDate(r.date));
             const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
             if (!monthlyData[monthKey]) monthlyData[monthKey] = { fuel: 0, repair: 0 };
-            monthlyData[monthKey].repair += (r.cost || 0);
+            monthlyData[monthKey].repair += (Number(r.cost) || 0);
         });
 
     // 燃料費を集計
     state.fuelRecords
-        .filter(f => !selectedId || f.vehicleId === selectedId)
+        .filter(f => !selectedId || String(f.vehicleId) === selectedId)
         .forEach(f => {
             const date = new Date(formatDate(f.date));
             const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
             if (!monthlyData[monthKey]) monthlyData[monthKey] = { fuel: 0, repair: 0 };
-            monthlyData[monthKey].fuel += (f.cost || 0);
+            monthlyData[monthKey].fuel += (Number(f.cost) || 0);
         });
 
     const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
-    
+    if (sortedMonths.length === 0) return; // データがなければ描画しない
+
     repairChart = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: sortedMonths,
             datasets: [
-                {
-                    label: '燃料費',
-                    data: sortedMonths.map(m => monthlyData[m].fuel),
-                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
-                    borderRadius: 4
-                },
-                {
-                    label: '修繕費',
-                    data: sortedMonths.map(m => monthlyData[m].repair),
-                    backgroundColor: 'rgba(245, 158, 11, 0.7)',
-                    borderRadius: 4
-                }
+                { label: '燃料費', data: sortedMonths.map(m => monthlyData[m].fuel), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 4 },
+                { label: '修繕費', data: sortedMonths.map(m => monthlyData[m].repair), backgroundColor: 'rgba(245, 158, 11, 0.7)', borderRadius: 4 }
             ]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { stacked: true, grid: { display: false } },
-                y: { stacked: true, beginAtZero: true, 
-                     ticks: { callback: v => '¥' + v.toLocaleString() } 
-                }
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
     });
 }
 
-// 2. 1kmあたり維持費推移（プロ仕様エリアチャート）
+// 2. 1kmあたり維持費推移
 function createFuelEfficiencyChart() {
     const canvas = document.getElementById('fuelEfficiencyChart');
-    if (!canvas) return;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
 
-    if (fuelChart) {
-        fuelChart.destroy();
-    }
+    if (fuelChart) fuelChart.destroy();
 
-    const ctx = canvas.getContext('2d');
-    const selectedId = state.selectedVehicle ? state.selectedVehicle.id : null;
-
-    // グラデーション設定
+    const selectedId = state.selectedVehicle ? String(state.selectedVehicle.id) : null;
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
     gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
 
     const monthlyData = {};
 
-    // 修繕費と燃料費を統合して1kmあたりのコストを算出
-    const repairs = state.repairs.filter(r => !selectedId || r.vehicleId === selectedId);
-    const fuels = state.fuelRecords.filter(f => !selectedId || f.vehicleId === selectedId);
-
-    repairs.forEach(r => {
+    state.repairs.filter(r => !selectedId || String(r.vehicleId) === selectedId).forEach(r => {
         const date = new Date(formatDate(r.date));
         const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
         if (!monthlyData[monthKey]) monthlyData[monthKey] = { cost: 0, mileage: 0 };
-        monthlyData[monthKey].cost += (r.cost || 0);
+        monthlyData[monthKey].cost += (Number(r.cost) || 0);
     });
 
-    fuels.forEach(f => {
+    state.fuelRecords.filter(f => !selectedId || String(f.vehicleId) === selectedId).forEach(f => {
         const date = new Date(formatDate(f.date));
         const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
         if (!monthlyData[monthKey]) monthlyData[monthKey] = { cost: 0, mileage: 0 };
-        monthlyData[monthKey].cost += (f.cost || 0);
-        monthlyData[monthKey].mileage += (f.mileage || 0);
+        monthlyData[monthKey].cost += (Number(f.cost) || 0);
+        monthlyData[monthKey].mileage += (Number(f.mileage) || 0);
     });
 
     const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
+    if (sortedMonths.length === 0) return;
+
     const costPerKm = sortedMonths.map(m => monthlyData[m].mileage > 0 ? monthlyData[m].cost / monthlyData[m].mileage : 0);
 
     fuelChart = new Chart(canvas, {
@@ -3015,20 +2991,10 @@ function createFuelEfficiencyChart() {
                 backgroundColor: gradient,
                 fill: true,
                 tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointBackgroundColor: '#3b82f6'
+                borderWidth: 3
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, ticks: { callback: v => '¥' + v.toFixed(2) } },
-                x: { grid: { display: false } }
-            }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
 }
 
