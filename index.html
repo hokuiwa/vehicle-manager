@@ -1911,13 +1911,13 @@
                     ${state.showNotifications ? renderNotifications() : ''}
                 `;
                 
-                // ダッシュボード表示時にグラフを描画
-                if (state.activeView === 'dashboard') {
-                    setTimeout(() => {
-                        createRepairCostChart();
-                        createFuelEfficiencyChart();
-                    }, 100);
-                }
+                // ダッシュボード、または車両詳細（detail）を表示している時にグラフを描画
+if (state.activeView === 'dashboard' || state.activeView === 'detail') {
+    setTimeout(() => {
+        createRepairCostChart();
+        createFuelEfficiencyChart();
+    }, 100);
+}
             } catch (error) {
                 console.error('❌ レンダリングエラー:', error);
                 const app = document.getElementById('app');
