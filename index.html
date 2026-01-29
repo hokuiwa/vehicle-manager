@@ -1883,57 +1883,61 @@
         // Render Functions
         // ========================================
         function render() {
-            try {
-                const app = document.getElementById('app');
-                
-                if (!app) {
-                    console.error('❌ アプリ要素が見つかりません');
-                    return;
-                }
-                
-                if (state.isLoading) {
-                    app.innerHTML = '<div class="loading">読み込み中...</div>';
-                    return;
-                }
+  try {
+    const app = document.getElementById('app');
 
-                app.innerHTML = `
-                    ${renderHeader()}
-                    <div class="container">
-                        ${state.activeView === 'dashboard' ? renderDashboard() : renderDetail()}
-                    </div>
-                    ${state.showAddVehicle ? renderVehicleForm() : ''}
-                    ${state.showAddRepair ? renderRepairForm() : ''}
-                    ${state.showAddFuel ? renderFuelForm() : ''}
-                    ${state.showAddAccident ? renderAccidentForm() : ''}
-                    ${state.showAddInsurance ? renderInsuranceForm() : ''}
-                    ${state.showAddMaintenance ? renderMaintenanceForm() : ''}
-                    ${state.showEmergencyModal ? renderEmergencyModal() : ''}
-                    ${state.showNotifications ? renderNotifications() : ''}
-                `;
-                
-                // ダッシュボード表示時にグラフを描画
-                if (state.activeView === 'dashboard') {
-                    setTimeout(() => {
-                        createRepairCostChart();
-                        createFuelEfficiencyChart();
-                    }, 100);
-                }
-            } catch (error) {
-                console.error('❌ レンダリングエラー:', error);
-                const app = document.getElementById('app');
-                if (app) {
-                    app.innerHTML = `
-                        <div style="padding: 40px; text-align: center;">
-                            <h2 style="color: #dc2626;">⚠️ エラーが発生しました</h2>
-                            <p style="color: #64748b; margin: 20px 0;">${error.message}</p>
-                            <button class="btn-primary" onclick="location.reload()" style="margin: 0 auto;">
-                                ページを再読み込み
-                            </button>
-                        </div>
-                    `;
-                }
-            }
+    if (!app) {
+      console.error('❌ アプリ要素が見つかりません');
+      return;
+    }
+
+    if (state.isLoading) {
+      app.innerHTML = '<div class="loading">読み込み中...</div>';
+      return;
+    }
+
+    app.innerHTML = `
+      ${renderHeader()}
+      <div class="container">
+        ${state.activeView === 'dashboard' ? renderDashboard() : renderDetail()}
+      </div>
+      ${state.showAddVehicle ? renderVehicleForm() : ''}
+      ${state.showAddRepair ? renderRepairForm() : ''}
+      ${state.showAddFuel ? renderFuelForm() : ''}
+      ${state.showAddAccident ? renderAccidentForm() : ''}
+      ${state.showAddInsurance ? renderInsuranceForm() : ''}
+      ${state.showAddMaintenance ? renderMaintenanceForm() : ''}
+      ${state.showEmergencyModal ? renderEmergencyModal() : ''}
+      ${state.showNotifications ? renderNotifications() : ''}
+    `;
+
+    // dashboard / detail でグラフ描画（Chart.js未ロードならスキップ）
+    if (state.activeView === 'dashboard' || state.activeView === 'detail') {
+      setTimeout(() => {
+        if (typeof Chart === 'undefined') {
+          console.warn('⚠️ Chart.js が読み込まれていないため、グラフ描画をスキップします');
+          return;
         }
+        createRepairCostChart();
+        createFuelEfficiencyChart();
+      }, 0);
+    }
+  } catch (error) {
+    console.error('❌ レンダリングエラー:', error);
+    const app = document.getElementById('app');
+    if (app) {
+      app.innerHTML = `
+        <div style="padding: 40px; text-align: center;">
+          <h2 style="color: #dc2626;">⚠️ エラーが発生しました</h2>
+          <p style="color: #64748b; margin: 20px 0;">${error.message}</p>
+          <button class="btn-primary" onclick="location.reload()" style="margin: 0 auto;">
+            ページを再読み込み
+          </button>
+        </div>
+      `;
+    }
+  }
+}
 
         function renderHeader() {
             const notifications = getNotifications();
