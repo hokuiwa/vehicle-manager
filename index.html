@@ -1911,17 +1911,13 @@
                     ${state.showNotifications ? renderNotifications() : ''}
                 `;
                 
-                // ダッシュボード、または車両詳細（detail）を表示している時にグラフを描画
-if (state.activeView === 'dashboard' || state.activeView === 'detail') {
-  setTimeout(() => {
-    if (typeof Chart === 'undefined') {
-      console.warn('Chart.js が読み込まれていないため、グラフ描画をスキップします');
-      return;
-    }
-    createRepairCostChart();
-    createFuelEfficiencyChart();
-  }, 0);
-}
+                // ダッシュボード表示時にグラフを描画
+                if (state.activeView === 'dashboard') {
+                    setTimeout(() => {
+                        createRepairCostChart();
+                        createFuelEfficiencyChart();
+                    }, 100);
+                }
             } catch (error) {
                 console.error('❌ レンダリングエラー:', error);
                 const app = document.getElementById('app');
