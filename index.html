@@ -2059,6 +2059,24 @@
             `;
         }
 
+        function convertDriveUrl(url) {
+    if (!url) return null;
+    
+    // Google DriveのファイルIDを抽出する正規表現
+    const regExp = /\/d\/([^\/]+)|id=([^\&]+)/;
+    const match = url.match(regExp);
+    
+    if (match) {
+        const fileId = match[1] || match[2];
+        // プレビュー用URLではなく、直接画像データを取得するURLに変換
+        // sz=w500 をつけると、読み込みを軽くするためにリサイズされた画像を取得できます
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+    }
+    
+    // すでに直リンクの場合や、ドライブ以外のURLならそのまま返す
+    return url;
+}
+        
         function renderStats(costs) {
             return `
                 <div class="stats-grid">
@@ -2141,15 +2159,19 @@
             const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
 
             // imageUrlを自動変換
-            const imageSource = convertDriveUrl(vehicle.imageUrl) || convertDriveUrl(vehicle.image);
+            const imageSource = convertDriveUrl(vehicle.imageUrl || vehicle.image);
 
-            return `
-                <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
-                    <div class="vehicle-image">
-                        ${imageSource ? `<img src="${imageSource}" alt="${vehicle.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
-                        <div class="vehicle-image-placeholder" style="${imageSource ? 'display: none;' : ''}">🚗</div>
-                        ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
-                    </div>
+return `
+    <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
+        <div class="vehicle-image">
+            ${imageSource ? 
+                `<img src="${imageSource}" alt="${vehicle.name}" 
+                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` 
+                : ''
+            }
+            <div class="vehicle-image-placeholder" style="${imageSource ? 'hidden' : 'display: flex;'}">🚗</div>
+            ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
+        </div>
                     <div class="vehicle-content">
                         <div class="vehicle-title">
                             <h3>${vehicle.name || ''}</h3>
