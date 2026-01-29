@@ -2159,18 +2159,17 @@
             const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
 
             // imageUrlを自動変換
-            const imageSource = convertDriveUrl(vehicle.imageUrl || vehicle.image);
+            // ... 前半の集計ロジックはそのまま ...
+    const imageSource = convertDriveUrl(vehicle.imageUrl || vehicle.image);
 
-return `
-    <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
-        <div class="vehicle-image">
-            ${imageSource ? 
-                `<img src="${imageSource}" alt="${vehicle.name}" 
-                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` 
-                : ''
-            }
-            <div class="vehicle-image-placeholder" style="${imageSource ? 'hidden' : 'display: flex;'}">🚗</div>
-            ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
+    return `
+        <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
+            <div class="vehicle-image">
+                ${imageSource 
+                    ? `<img src="${imageSource}" alt="${vehicle.name}" onerror="this.parentElement.innerHTML='<div class=\'vehicle-image-placeholder\'>🚗</div>';">`
+                    : `<div class="vehicle-image-placeholder">🚗</div>`
+                }
+                ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
         </div>
                     <div class="vehicle-content">
                         <div class="vehicle-title">
@@ -2969,79 +2968,89 @@ return `
         }
 
         function createFuelEfficiencyChart() {
-            const canvas = document.getElementById('fuelEfficiencyChart');
-            if (!canvas) return;
-            
-            if (fuelChart) {
-                fuelChart.destroy();
-            }
-            
-            // 月別の維持費と走行距離を集計
-            const monthlyData = {};
-            
-            // 修繕費を集計
-            state.repairs.forEach(r => {
-                const date = new Date(formatDate(r.date));
-                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                if (!monthlyData[monthKey]) {
-                    monthlyData[monthKey] = { cost: 0, mileage: 0 };
-                }
-                monthlyData[monthKey].cost += (r.cost || 0);
-            });
-            
-            // 燃料費と走行距離を集計
-            state.fuelRecords.forEach(f => {
-                const date = new Date(formatDate(f.date));
-                const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                if (!monthlyData[monthKey]) {
-                    monthlyData[monthKey] = { cost: 0, mileage: 0 };
-                }
-                monthlyData[monthKey].cost += (f.cost || 0);
-                monthlyData[monthKey].mileage += (f.mileage || 0);
-            });
-            
-            // 1kmあたりの維持費を計算
-            const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
-            const costPerKm = sortedMonths.map(month => {
-                const data = monthlyData[month];
-                return data.mileage > 0 ? data.cost / data.mileage : 0;
-            });
-            
-            fuelChart = new Chart(canvas, {
-                type: 'line',
-                data: {
-                    labels: sortedMonths,
-                    datasets: [{
-                        label: '1kmあたり維持費',
-                        data: costPerKm,
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '¥' + value.toFixed(2);
-                                }
-                            }
-                        }
+    const canvas = document.getElementById('fuelEfficiencyChart');
+    if (!canvas || !state.selectedVehicle) return; // 選択中の車両がない場合は何もしない
+
+    if (fuelChart) {
+        fuelChart.destroy();
+    }
+
+    const ctx = canvas.getContext('2d');
+    const selectedId = state.selectedVehicle.id; // 選択中の車両IDを取得
+
+    // グラデーションの作成
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');   // 上部は濃い青（透明度0.5）
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.01)'); // 下部はほぼ透明
+
+    // 選択中の車両のみのデータを集計
+    const monthlyData = {};
+
+    // 1. 修繕費をフィルタリング
+    state.repairs.filter(r => r.vehicleId === selectedId).forEach(r => {
+        const date = new Date(formatDate(r.date));
+        const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        if (!monthlyData[monthKey]) monthlyData[monthKey] = { cost: 0, mileage: 0 };
+        monthlyData[monthKey].cost += (r.cost || 0);
+    });
+
+    // 2. 燃料費と走行距離をフィルタリング
+    state.fuelRecords.filter(f => f.vehicleId === selectedId).forEach(f => {
+        const date = new Date(formatDate(f.date));
+        const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        if (!monthlyData[monthKey]) monthlyData[monthKey] = { cost: 0, mileage: 0 };
+        monthlyData[monthKey].cost += (f.cost || 0);
+        monthlyData[monthKey].mileage += (f.mileage || 0);
+    });
+
+    const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
+    const costPerKm = sortedMonths.map(month => {
+        const data = monthlyData[month];
+        return data.mileage > 0 ? (data.cost / data.mileage) : 0;
+    });
+
+    fuelChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: sortedMonths,
+            datasets: [{
+                label: `${state.selectedVehicle.name} の1kmあたりコスト`,
+                data: costPerKm,
+                borderColor: '#3b82f6',
+                borderWidth: 3,
+                backgroundColor: gradient, // ここに作成したグラデーションを適用
+                fill: true,
+                tension: 0.4, // カーブを滑らかに
+                pointBackgroundColor: '#3b82f6',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    callbacks: {
+                        label: (context) => ` ¥${context.raw.toFixed(1)} / km`
                     }
                 }
-            });
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                        callback: value => '¥' + value.toFixed(1)
+                    }
+                },
+                x: { grid: { display: false } }
+            }
         }
+    });
+}
 
         // ========================================
         // Initialize
