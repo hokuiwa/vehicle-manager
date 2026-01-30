@@ -1914,6 +1914,13 @@
                         createFuelEfficiencyChart();
                     }, 100);
                 }
+                
+                // 車両詳細ページでもグラフを描画
+                if (state.activeView === 'detail') {
+                    setTimeout(() => {
+                        createFuelEfficiencyChart();
+                    }, 100);
+                }
             } catch (error) {
                 console.error('❌ レンダリングエラー:', error);
                 const app = document.getElementById('app');
@@ -2212,6 +2219,15 @@
                                 <label style="color: #64748b; font-size: 13px;">購入価格</label>
                                 <div style="font-size: 20px; font-weight: 700; margin-top: 4px;">¥${(vehicle.purchasePrice || 0).toLocaleString()}</div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+                        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">
+                            💰 ${vehicle.name} の1kmあたり維持費推移
+                        </h3>
+                        <div style="height: 300px;">
+                            <canvas id="fuelEfficiencyChart"></canvas>
                         </div>
                     </div>
                     
@@ -2998,11 +3014,26 @@
                 fuelChart.destroy();
             }
             
+            const ctx = canvas.getContext('2d');
+            
+            // グラデーションの作成
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.01)');
+            
+            // ダッシュボードでは全車両、詳細ページでは選択車両のみ
+            const isDetailView = state.activeView === 'detail' && state.selectedVehicle;
+            const targetVehicleId = isDetailView ? state.selectedVehicle.id : null;
+            
             // 月別の維持費と走行距離を集計
             const monthlyData = {};
             
-            // 修繕費を集計
-            state.repairs.forEach(r => {
+            // 修繕費を集計（フィルタリング）
+            const repairs = targetVehicleId 
+                ? state.repairs.filter(r => r.vehicleId === targetVehicleId)
+                : state.repairs;
+                
+            repairs.forEach(r => {
                 const date = new Date(formatDate(r.date));
                 const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
                 if (!monthlyData[monthKey]) {
@@ -3011,8 +3042,12 @@
                 monthlyData[monthKey].cost += (r.cost || 0);
             });
             
-            // 燃料費と走行距離を集計
-            state.fuelRecords.forEach(f => {
+            // 燃料費と走行距離を集計（フィルタリング）
+            const fuelRecords = targetVehicleId
+                ? state.fuelRecords.filter(f => f.vehicleId === targetVehicleId)
+                : state.fuelRecords;
+                
+            fuelRecords.forEach(f => {
                 const date = new Date(formatDate(f.date));
                 const monthKey = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
                 if (!monthlyData[monthKey]) {
@@ -3026,40 +3061,54 @@
             const sortedMonths = Object.keys(monthlyData).sort().slice(-12);
             const costPerKm = sortedMonths.map(month => {
                 const data = monthlyData[month];
-                return data.mileage > 0 ? data.cost / data.mileage : 0;
+                return data.mileage > 0 ? (data.cost / data.mileage) : 0;
             });
             
-            fuelChart = new Chart(canvas, {
+            const labelText = isDetailView 
+                ? `${state.selectedVehicle.name} の1kmあたりコスト`
+                : '全車両の1kmあたりコスト';
+            
+            fuelChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: sortedMonths,
                     datasets: [{
-                        label: '1kmあたり維持費',
+                        label: labelText,
                         data: costPerKm,
-                        borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.4,
+                        borderColor: '#3b82f6',
+                        borderWidth: 3,
+                        backgroundColor: gradient,
                         fill: true,
-                        borderWidth: 2
+                        tension: 0.4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: false
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            padding: 12,
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            callbacks: {
+                                label: (context) => ` ¥${context.raw.toFixed(1)} / km`
+                            }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
                             ticks: {
-                                callback: function(value) {
-                                    return '¥' + value.toFixed(2);
-                                }
+                                callback: value => '¥' + value.toFixed(1)
                             }
-                        }
+                        },
+                        x: { grid: { display: false } }
                     }
                 }
             });
