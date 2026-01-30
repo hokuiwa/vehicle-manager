@@ -639,24 +639,17 @@
         function convertDriveUrl(url) {
             if (!url) return null;
             
-            // 既に正しい形式の場合はそのまま返す
-            if (url.includes('drive.google.com/uc?export=view')) {
-                return url;
+            // Google DriveのファイルIDを抽出する正規表現
+            const regExp = /\/d\/([^\/]+)|id=([^\&]+)/;
+            const match = url.match(regExp);
+            
+            if (match) {
+                const fileId = match[1] || match[2];
+                // thumbnail形式で画像を取得（軽量化のためリサイズ）
+                return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
             }
             
-            // /file/d/xxxxx/view 形式から ID を抽出
-            const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-            if (match && match[1]) {
-                return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-            }
-            
-            // ?id=xxxxx 形式から ID を抽出
-            const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-            if (idMatch && idMatch[1]) {
-                return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
-            }
-            
-            // 変換できない場合は元のURLを返す
+            // すでに直リンクの場合や、ドライブ以外のURLならそのまま返す
             return url;
         }
 
