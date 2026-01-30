@@ -631,7 +631,7 @@
         // ========================================
         // GAS API設定
         // ========================================
-        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxqXU57T_iYg3Y0WJHAnrQKq69MyuBtNTS6JO7tygtEtpZ8cNCVWWLib36AF5lB5a8Edw/exec';
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz_7UGxxuMIYCSifsYjgrwtX4bfxFgNcIoKI6lDosr4VCeFUE6p1DykII5-9OpuWxMy7w/exec';
 
         // ========================================
         // GoogleドライブURL変換関数
@@ -1708,6 +1708,7 @@
                 const vehicleData = {
                     id: state.selectedVehicle?.id,
                     number: formData.get('number') || '',
+                    radioNumber: formData.get('radioNumber') || '',
                     name: formData.get('name') || '',
                     year: parseInt(formData.get('year')) || 0,
                     mileage: parseInt(formData.get('mileage')) || 0,
@@ -1789,6 +1790,8 @@
                     type: formData.get('type') || '',
                     location: formData.get('location') || '',
                     description: formData.get('description') || '',
+                    reportUrl: formData.get('reportUrl') || '',
+                    dashcamUrl: formData.get('dashcamUrl') || '',
                     repairCost: parseInt(formData.get('repairCost')) || 0,
                     insuranceClaim: parseInt(formData.get('insuranceClaim')) || 0
                 };
@@ -1935,24 +1938,6 @@
             }
         }
 
-        function convertDriveUrl(url) {
-    if (!url) return null;
-    
-    // Google DriveのファイルIDを抽出する正規表現
-    const regExp = /\/d\/([^\/]+)|id=([^\&]+)/;
-    const match = url.match(regExp);
-    
-    if (match) {
-        const fileId = match[1] || match[2];
-        // プレビュー用URLではなく、直接画像データを取得するURLに変換
-        // sz=w500 をつけると、読み込みを軽くするためにリサイズされた画像を取得できます
-        return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
-    }
-    
-    // すでに直リンクの場合や、ドライブ以外のURLならそのまま返す
-    return url;
-}
-        
         function renderHeader() {
             const notifications = getNotifications();
             return `
@@ -2159,17 +2144,15 @@
             const totalRepairCost = vehicleRepairs.reduce((sum, r) => sum + (r.cost || 0), 0);
 
             // imageUrlを自動変換
-            const imageSource = convertDriveUrl(vehicle.imageUrl || vehicle.image);
+            const imageSource = convertDriveUrl(vehicle.imageUrl) || convertDriveUrl(vehicle.image);
 
-    return `
-        <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
-            <div class="vehicle-image">
-                ${imageSource 
-                    ? `<img src="${imageSource}" alt="${vehicle.name}" onerror="this.parentElement.innerHTML='<div class=\'vehicle-image-placeholder\'>🚗</div>';">`
-                    : `<div class="vehicle-image-placeholder">🚗</div>`
-                }
-                ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
-            </div>
+            return `
+                <div class="vehicle-card" onclick="selectVehicle('${vehicle.id}')">
+                    <div class="vehicle-image">
+                        ${imageSource ? `<img src="${imageSource}" alt="${vehicle.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : ''}
+                        <div class="vehicle-image-placeholder" style="${imageSource ? 'display: none;' : ''}">🚗</div>
+                        ${isInspectionSoon ? '<div class="inspection-badge">車検近い</div>' : ''}
+                    </div>
                     <div class="vehicle-content">
                         <div class="vehicle-title">
                             <h3>${vehicle.name || ''}</h3>
@@ -2272,6 +2255,10 @@
                                 <div>
                                     <label style="color: #64748b; font-size: 13px;">車両名</label>
                                     <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.name}</div>
+                                </div>
+                                <div>
+                                    <label style="color: #64748b; font-size: 13px;">無線機番号</label>
+                                    <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">${vehicle.radioNumber || '未登録'}</div>
                                 </div>
                                 <div>
                                     <label style="color: #64748b; font-size: 13px;">年式</label>
@@ -2424,6 +2411,29 @@
                                         <div style="font-weight: 600; font-size: 16px;">${a.type}</div>
                                         <div style="color: #64748b; font-size: 13px; margin-top: 4px;">${formatDate(a.date)} - ${a.location}</div>
                                         ${a.description ? `<div style="color: #64748b; font-size: 13px; margin-top: 8px;">${a.description}</div>` : ''}
+                                        
+                                        ${a.reportUrl || a.dashcamUrl ? `
+                                            <div style="display: flex; gap: 12px; margin-top: 12px;">
+                                                ${a.reportUrl ? `
+                                                    <a href="${a.reportUrl}" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px;">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                            <polyline points="14 2 14 8 20 8"/>
+                                                        </svg>
+                                                        事故報告書
+                                                    </a>
+                                                ` : ''}
+                                                ${a.dashcamUrl ? `
+                                                    <a href="${a.dashcamUrl}" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px;">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="m22 8-6 4 6 4V8Z"/>
+                                                            <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                                                        </svg>
+                                                        ドラレコ映像
+                                                    </a>
+                                                ` : ''}
+                                            </div>
+                                        ` : ''}
                                     </div>
                                     <div class="record-actions">
                                         <button class="btn-secondary" onclick="editAccident('${a.id}')">編集</button>
@@ -2532,6 +2542,13 @@
                             <div class="form-group">
                                 <label>車両番号</label>
                                 <input type="text" class="form-control" name="number" value="${vehicle ? vehicle.number : ''}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>無線機番号</label>
+                                <input type="text" class="form-control" name="radioNumber" value="${vehicle ? vehicle.radioNumber || '' : ''}" placeholder="例: 1, 2, 3...">
+                                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
+                                    自社で管理している無線機の番号を入力
+                                </small>
                             </div>
                             <div class="form-group">
                                 <label>車両名</label>
@@ -2695,6 +2712,20 @@
                             <div class="form-group">
                                 <label>状況説明</label>
                                 <textarea class="form-control" name="description">${isEditing ? accident.description : ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>事故報告書 URL（Googleドライブ）</label>
+                                <input type="url" class="form-control" name="reportUrl" value="${isEditing ? accident.reportUrl || '' : ''}" placeholder="https://drive.google.com/file/d/xxxxx/view">
+                                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
+                                    📄 事故報告書PDFをGoogleドライブにアップロード → リンクをコピー
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label>ドライブレコーダー映像 URL（Googleドライブ）</label>
+                                <input type="url" class="form-control" name="dashcamUrl" value="${isEditing ? accident.dashcamUrl || '' : ''}" placeholder="https://drive.google.com/file/d/xxxxx/view">
+                                <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">
+                                    📹 ドラレコ映像をGoogleドライブにアップロード → リンクをコピー
+                                </small>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
